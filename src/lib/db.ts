@@ -6,10 +6,10 @@ let pool: Pool | null = null;
 export function connect(): Pool {
     const options: PoolOptions = {
         host: process.env.TIDB_HOST, // TiDB host, for example: {gateway-region}.aws.tidbcloud.com
-        port: Number(process.env.TIDB_PORT) || 4000, // TiDB port, default: 4000
+        port: Number(process.env.TIDB_PORT), // TiDB port, default: 4000
         user: process.env.TIDB_USER, // TiDB user, for example: {prefix}.root
         password: process.env.TIDB_PASSWORD, // The password of TiDB user.
-        database: process.env.TIDB_DATABASE || '24_gallery', // TiDB database name, default: test
+        database: process.env.TIDB_DB_NAME, // TiDB database name, default: test
         ssl: {
             minVersion: 'TLSv1.2',
             rejectUnauthorized: true,
