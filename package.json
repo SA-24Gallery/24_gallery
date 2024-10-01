@@ -19,6 +19,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.446.0",
+    "mysql2": "^3.11.3",
     "next": "14.2.13",
     "react": "^18",
     "react-day-picker": "^8.10.1",
@@ -27,7 +28,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.16.10",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
