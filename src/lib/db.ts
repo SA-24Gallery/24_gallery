@@ -1,5 +1,6 @@
-
 import mysql, { Pool, PoolOptions } from 'mysql2/promise';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
 
 let pool: Pool | null = null;
 
@@ -29,13 +30,19 @@ export function getPool(): Pool {
     return pool;
 }
 
-export async function query_data(sql: string): Promise<any> {
-    try {
-        const [rows] = await getPool().query(sql);
-        console.log(rows);
-        return rows;
-    } catch (error) {
-        console.error('Error executing query:', error);
-        throw error;
+export async function closePool() {
+    if (pool) {
+      await pool.end();
+      pool = null;
     }
-}
+  }
+
+  export async function query<T extends RowDataPacket[][] | RowDataPacket[] | ResultSetHeader>(
+      sql: string,
+      params: any[] = []
+  ): Promise<T> {
+      const pool = getPool();
+      const [results] = await pool.execute(sql, params);
+      return results as T;
+  }
+  

@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
-interface TestData {
-    results: any[];
-}
-
 export default function TestPage() {
-    const [data, setData] = useState<TestData | null>(null);
+    const [data, setData] = useState<any[]>([]); // ใช้ any[] แทนการใช้ interface
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -18,9 +14,9 @@ export default function TestPage() {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const jsonData: TestData = await response.json();
+                const jsonData = await response.json();
                 setData(jsonData);
-                console.log('Results:', jsonData.results);
+                console.log('Results:', jsonData);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
                 console.error('Error fetching data:', err);
@@ -33,13 +29,19 @@ export default function TestPage() {
 
     if (isLoading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
-    if (!data) return <div>No data available</div>;
+
+    if (!data || data.length === 0) {
+        return <div>No data available</div>;
+    }
 
     return (
         <div>
-            <h1>Test Page</h1>
-            <h2>Results:</h2>
-            <pre>{JSON.stringify(data, null, 2)}</pre>
+            <h1>Usernames:</h1>
+            <ul>
+                {data.map((user, index) => (
+                    <li key={index}>{user.Password}</li>
+                ))}
+            </ul>
         </div>
     );
 }
