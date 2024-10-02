@@ -1,5 +1,5 @@
 import { NavBar } from "@/components/nav-bar";
-import { LoginForm } from "./LoginForm";
+import { LoginForm } from "./login-form";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 
