@@ -86,7 +86,7 @@ const RightItem = ({ session }: { session: any }) => {
 
 export function NavBar({ session }: { session: any }) {
     return (
-        <div className={"flex justify-between items-center w-auto px-16 py-6"}>
+        <div className={"flex justify-between items-center w-auto px-16 h-[72px]"}>
             <div className={"flex flex-row gap-5 items-center"}>
                 <Link className={"font-bold text-lg"} href="/" passHref>
                     24GALLERY
