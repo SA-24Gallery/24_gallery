@@ -1,18 +1,21 @@
-import {NavBar} from "@/components/nav-bar";
+import { NavBar } from "@/components/nav-bar";
+import { getServerSession } from "next-auth";
 import Image from "next/image";
+import { authOptions } from "./api/auth/[...nextauth]/route";
 
-export default function Home() {
-  return (
-      <div>
-          <NavBar />
-          <Image
-              src="/images/home.png"
-              alt="Poster"
-              layout="responsive"
-              width={1920}
-              height={818.67}
-          />
+export default async function Home() {
+    const session = await getServerSession(authOptions);
+    return (
+        <div>
+            <NavBar session={session} />
+            <Image
+                src="/images/home.png"
+                alt="Poster"
+                layout="responsive"
+                width={1920}
+                height={818.67}
+            />
 
-      </div>
-  );
+        </div>
+    );
 }

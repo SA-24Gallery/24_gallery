@@ -7,7 +7,7 @@ import {
 export type Icons = typeof LucidIcon;
 
 export const Icons = {
-    dot : Dot,
+    dot: Dot,
     lock_open: LockOpen,
     circle_user_round: CircleUserRound,
 };
