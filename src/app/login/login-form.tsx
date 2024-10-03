@@ -13,14 +13,14 @@ export function LoginForm() {
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);  // เพิ่ม isLoading state
+    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setEmailError('');
         setPasswordError('');
-        setIsLoading(true);  // ตั้งค่า isLoading เป็น true เมื่อเริ่มการเข้าสู่ระบบ
+        setIsLoading(true);
 
         if (!email) {
             setEmailError("Email is required");
@@ -45,7 +45,7 @@ export function LoginForm() {
             } else if (result.error.includes("Password")) {
                 setPasswordError('*' + result.error);
             }
-            setIsLoading(false);  // ตั้งค่า isLoading เป็น false เมื่อมี error
+            setIsLoading(false);
         } else {
             router.push('/');
         }
@@ -54,7 +54,8 @@ export function LoginForm() {
     return (
         <>
             <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
-                <div className="flex flex-col items-center bg-white px-36 py-16 gap-7 w-[814px] h-[436px] rounded-[20px]">
+                <div
+                    className="flex flex-col items-center bg-white px-36 py-16 gap-7 w-[814px] h-[436px] rounded-[20px]">
 
                     <div className="flex flex-col gap-4 w-full h-fit">
                         <div className='flex flex-row gap-4 items-end'>
@@ -97,13 +98,14 @@ export function LoginForm() {
 
                         <div className="flex justify-end w-full h-fit gap-3 font-medium text-lg">
                             <div>Not a member?</div>
-                            <Link href="/sign-up" style={{ color: "#B7828E" }}>Register now</Link>
+                            <Link href="/register" style={{ color: "#B7828E" }}>Register now</Link>
                         </div>
 
                     </div>
 
-                    <Button type="submit" disabled={isLoading} className="w-72 rounded-3xl font-bold text-center text-xl">
-                        {isLoading ? "Logging in..." : "Log in"}  {/* เปลี่ยนข้อความในปุ่ม */}
+                    <Button type="submit" disabled={isLoading}
+                        className="w-72 rounded-3xl font-bold text-center text-xl">
+                        {isLoading ? "Logging in..." : "Log in"}
                     </Button>
 
                 </div>

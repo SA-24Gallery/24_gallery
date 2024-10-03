@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function TestPage() {
     const [data, setData] = useState<any[]>([]); // ใช้ any[] แทนการใช้ interface
@@ -24,6 +24,7 @@ export default function TestPage() {
                 setIsLoading(false);
             }
         }
+
         fetchData();
     }, []);
 

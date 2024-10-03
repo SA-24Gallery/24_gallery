@@ -36,9 +36,7 @@ export const authOptions: NextAuthOptions = {
                 const user = users[0];
                 const encryptedPassword = user.Password;
 
-                // รอระบบ register
-                // const passwordMatch = await compare(credentials.password, encryptedPassword);
-                const passwordMatch = credentials.password == encryptedPassword;
+                const passwordMatch = await compare(credentials.password, encryptedPassword);
 
                 if (!passwordMatch) {
                     throw new Error("Password is incorrect");
@@ -62,7 +60,7 @@ export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     session: {
         strategy: "jwt",
-        maxAge: 24 * 60 * 60, // 1 วัน
+        maxAge: 12 * 60 * 60,
     },
 
     callbacks: {

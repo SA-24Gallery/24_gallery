@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db'; // ปรับเส้นทางนำเข้าตามที่จำเป็น
-import { RowDataPacket } from 'mysql2';
 
 
 export async function GET(request: Request) {
     try {
-        const sql = 'SELECT * FROM users'; 
+        const sql = 'SELECT * FROM users';
         const data = await query(sql);
         return NextResponse.json(data);
     } catch (error) {
