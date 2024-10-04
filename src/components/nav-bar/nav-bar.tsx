@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import {
     NavigationMenu,
     NavigationMenuItem,
@@ -11,8 +10,8 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
-import { Button } from "./ui/button";
-import { Icons } from "./icons";
+import NotiBell from "./noti-bell";
+import ProfileIcon from "./profile-icon";
 
 const LeftItem = ({ session }: { session: any }) => {
     return (
@@ -55,24 +54,9 @@ const RightItem = ({ session }: { session: any }) => {
 
             <NavigationMenuItem>
                 {session ? (
-                    <div className="flex flex-col gap-4 items-center sm:flex-row">
-                        <Link href={`/profile/${session.user?.email}`} passHref>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="hidden sm:flex border-none w-[40px] h-[40px] bg-transparent active:ring-0 hover:bg-transparent"
-                            >
-                                <Icons.circle_user_round className="h-full w-full stroke-[1px]" />
-                            </Button>
-                        </Link>
-
-                        <Link href={`/profile/${session.user?.email}`} passHref>
-                            <div className={"font-medium text-lg sm:hidden"}>Profile</div>
-                        </Link>
-
-                        <div onClick={() => signOut({ callbackUrl: "/" })}>
-                            <div className={"font-medium text-lg cursor-pointer"}>LOG OUT</div>
-                        </div>
+                    <div className="flex flex-col gap-5 items-center sm:flex-row w-fit hi">
+                        <NotiBell />
+                        <ProfileIcon email={session?.user?.email} />
                     </div>
                 ) : (
                     <NavigationMenuLink href="/login/">

@@ -96,7 +96,6 @@ export function RegisterForm() {
                             <p className="text-lg" style={{ color: "#FF0000" }}>{phoneNumberError}</p>
                         </div>
 
-
                         <Input
                             type="tel"
                             placeholder="Enter your phone number"
@@ -107,7 +106,6 @@ export function RegisterForm() {
                             title={"Phone number must be 10 digits and start with 0"}
                             required
                         />
-
 
                     </div>
 

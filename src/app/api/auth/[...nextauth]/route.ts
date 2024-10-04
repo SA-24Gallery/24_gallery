@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcrypt";
+import { compare } from "bcryptjs";
 import { query } from "@/lib/db";
 import { RowDataPacket } from "mysql2";
 
@@ -9,6 +9,8 @@ interface UserRow extends RowDataPacket {
     Password: string;
     Is_active_user: boolean;
     Role: string;
+    Phone_number: string;
+    User_name: string;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -53,6 +55,8 @@ export const authOptions: NextAuthOptions = {
                     id: user.Email,
                     email: user.Email,
                     role: user.Role,
+                    phone_number: user.Phone_number,
+                    name: user.User_name,
                 };
             }
         })
@@ -64,21 +68,29 @@ export const authOptions: NextAuthOptions = {
     },
 
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.role = user.role;
+                token.phone_number = user.phone_number;
             }
+    
+            if (trigger === "update" && session) {
+                token = {
+                    ...token,
+                    ...session.user,
+                  };
+            }
+    
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.role = token.role;
+                session.user.phone_number = token.phone_number;
+                session.user.name = token.name;
             }
             return session;
         }
-    },
-    pages: {
-        signIn: '/login',
     },
 };
 
