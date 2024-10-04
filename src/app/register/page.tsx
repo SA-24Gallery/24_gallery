@@ -1,6 +1,6 @@
 import { NavBar } from "@/components/nav-bar/nav-bar";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 import { RegisterForm } from "../../components/register-form";
 
 export default async function RegisterPage() {

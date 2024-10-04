@@ -12,11 +12,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import NotiBell from "./noti-bell";
 import ProfileIcon from "./profile-icon";
+import { Session } from "next-auth";
 
-const LeftItem = ({ session }: { session: any }) => {
+const LeftItem = ({ session }: { session: Session | null }) => {
     return (
         <>
-            {session && session.user.role === "A" ? (
+            {session?.user?.role === "A" ? (
                 <>
                     <NavigationMenuItem>
                         <NavigationMenuLink href="/">
@@ -43,7 +44,7 @@ const LeftItem = ({ session }: { session: any }) => {
     );
 };
 
-const RightItem = ({ session }: { session: any }) => {
+const RightItem = ({ session }: { session: Session | null }) => {
     return (
         <>
             <NavigationMenuItem>
@@ -56,7 +57,7 @@ const RightItem = ({ session }: { session: any }) => {
                 {session ? (
                     <div className="flex flex-col gap-5 items-center sm:flex-row w-fit hi">
                         <NotiBell />
-                        <ProfileIcon email={session?.user?.email} />
+                        <ProfileIcon email ={session.user?.email? (session.user?.email):("")} />
                     </div>
                 ) : (
                     <NavigationMenuLink href="/login/">
@@ -68,7 +69,7 @@ const RightItem = ({ session }: { session: any }) => {
     );
 };
 
-export function NavBar({ session }: { session: any }) {
+export function NavBar({ session }: { session: Session | null }) {
     return (
         <div className={"flex justify-between items-center w-auto px-16 h-[72px]"}>
             <div className={"flex flex-row gap-5 items-center"}>

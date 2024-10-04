@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 
 import { NavBar } from "@/components/nav-bar/nav-bar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { LogOutButton } from "@/components/log-out-button";
 import { EditDialog } from "./edit-dialog";
 
 export default function ProfileContent({ params }: { params: { email: string } }) {
-    const { data: session, status, update } = useSession();
+    const { data: session, update, status } = useSession();
     const router = useRouter();
 
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -31,11 +31,11 @@ export default function ProfileContent({ params }: { params: { email: string } }
     }, [session]);
 
     if (status === "loading") {
-        return <p>Loading...</p>;
+        return <p></p>;
     }
 
     if (!session || session?.user?.email !== decodeURIComponent(params.email)) {
-        return <p>Not authorized</p>;
+        notFound();
     }
 
     const handleSavePhone = async (newPhoneNumber: string) => {
@@ -52,7 +52,7 @@ export default function ProfileContent({ params }: { params: { email: string } }
             const result = await response.json();
 
             if (!response.ok) {
-                setPhoneNumberError(result.error || 'Failed to update phone number');
+                setPhoneNumberError(result.error || 'ไม่สามารถอัปเดตหมายเลขโทรศัพท์ได้');
             } else {
                 await update({
                     user: {
@@ -65,7 +65,8 @@ export default function ProfileContent({ params }: { params: { email: string } }
                 router.refresh();
             }
         } catch (error) {
-            setPhoneNumberError('An error occurred');
+            console.error('Error updating phone number:', error);
+            setPhoneNumberError('เกิดข้อผิดพลาดในการอัปเดตหมายเลขโทรศัพท์ของคุณ');
         } finally {
             setIsSavingPhone(false);
         }
@@ -85,7 +86,7 @@ export default function ProfileContent({ params }: { params: { email: string } }
             const result = await response.json();
 
             if (!response.ok) {
-                setNameError(result.error || 'Failed to update name');
+                setNameError(result.error || 'ไม่สามารถอัปเดตชื่อได้');
             } else {
                 await update({
                     user: {
@@ -98,7 +99,8 @@ export default function ProfileContent({ params }: { params: { email: string } }
                 router.refresh();
             }
         } catch (error) {
-            setNameError('An error occurred');
+            console.error('Error updating name:', error);
+            setNameError('เกิดข้อผิดพลาดในการอัปเดตชื่อของคุณ');
         } finally {
             setIsSavingName(false);
         }

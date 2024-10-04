@@ -1,7 +1,6 @@
 import mysql, { Pool, PoolOptions } from 'mysql2/promise';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-
 let pool: Pool | null = null;
 
 export function connect(): Pool {
@@ -39,7 +38,7 @@ export async function closePool() {
 
 export async function query<T extends RowDataPacket[][] | RowDataPacket[] | ResultSetHeader>(
     sql: string,
-    params: any[] = []
+    params: unknown[] = []
 ): Promise<T> {
     const pool = getPool();
     const [results] = await pool.execute(sql, params);

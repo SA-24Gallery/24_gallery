@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface EditDialogProps {
     label: string;
@@ -59,7 +60,7 @@ export const EditDialog: React.FC<EditDialogProps> = ({
                 <DialogHeader>
                     <DialogTitle>Edit {label}</DialogTitle>
                     <DialogDescription>
-                        Make changes to your {label.toLowerCase()} here. Click save when you're done.
+                        Make changes to your {label.toLowerCase()} here. Click save when you&#39;re done.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -72,7 +73,7 @@ export const EditDialog: React.FC<EditDialogProps> = ({
                         <Input
                             type={inputType}
                             placeholder={`Enter your ${label.toLowerCase()}`}
-                            className="relative w-full rounded-md text-base h-11"
+                            className={cn("relative w-full rounded-md text-base h-11")}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             pattern={validationPattern}
