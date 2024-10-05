@@ -1,10 +1,15 @@
 import { NavBar } from "@/components/nav-bar/nav-bar";
 import { getServerSession } from "next-auth";
 import { authOptions } from '@/lib/auth';
-import { RegisterForm } from "../../components/register-form";
+import { RegisterForm } from "@/components/register-form";
+import { redirect } from 'next/navigation';
 
 export default async function RegisterPage() {
     const session = await getServerSession(authOptions);
+    
+    if (session) {
+        redirect('/');
+    }
 
     return (
         <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "60px" }}>
@@ -14,7 +19,7 @@ export default async function RegisterPage() {
                     Register
                 </h1>
 
-                <RegisterForm />
+                <RegisterForm/>
 
             </div>
         </div>
