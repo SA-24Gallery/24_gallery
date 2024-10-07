@@ -1,7 +1,6 @@
 import { NavBar } from '@/components/nav-bar/nav-bar'; 
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from "next-auth";
-import { redirect } from 'next/navigation';
 import ManageOrderDetails from "@/components/manage-order-details";
 
 export default async function OrderPage() {

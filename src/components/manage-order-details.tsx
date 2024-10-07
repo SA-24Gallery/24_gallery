@@ -8,6 +8,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,} from "@/components/ui/alert-dialog";
 
 export default function ManageOrderDetails() {
+    
     const initialSteps = [
         { title: "Receive order", date: "10/9/2024", time: "10:00", completed: false },
         { title: "Order completed", date: "10/9/2024", time: "10:20", completed: false },
@@ -16,7 +17,7 @@ export default function ManageOrderDetails() {
 
     const [steps, setSteps] = useState(initialSteps);
     const [currentStatusIndex, setCurrentStatusIndex] = useState(0);
-    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false); // สำหรับควบคุมการแสดงผลของ Alert Dialog
+
     const order = {
         order_id: "12345",
         customer_name: "Carina Ningning",
