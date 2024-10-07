@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import ProductItem from '@/components/ui/product-item';
+import React, { useState } from "react";
+import ProductItem from '@/components/order-details/product-item';
 import { Button } from "@/components/ui/button"; 
 
 export default function MyCartForm() {
@@ -41,7 +41,7 @@ export default function MyCartForm() {
     const [shippingOption, setShippingOption] = useState(""); 
     const shippingCost = shippingOption === "ThailandPost" ? 50 : 0;
 
-    // คำนวณ Total Price โดยรวมราคาจากแต่ละสินค้าและค่าจัดส่ง
+    // calculate Total Price 
     const totalPrice = products.reduce((total, product) => {
         return total + (product.price_per_unit * product.product_qty);
     }, 0) + shippingCost;
@@ -50,6 +50,13 @@ export default function MyCartForm() {
         const updatedProducts = products.filter((_, i) => i !== index);
         setProducts(updatedProducts);
     };
+
+
+    const formatDate = (dateString: string): string => {
+        const date = new Date(dateString);
+        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    };
+
 
     return (
         <div className="w-full flex justify-center">
@@ -82,11 +89,11 @@ export default function MyCartForm() {
                     </div>
                     <div className="mb-4">
                         <h3 className="font-bold">Date ordered</h3>
-                        <p>{order.order_date || "null"}</p>
+                        <p>{formatDate(order.order_date) || "null"}</p>
                     </div>
                     <div className="mb-4">
                         <h3 className="font-bold">Date received</h3>
-                        <p>{order.received_date || "null"}</p>
+                        <p>{formatDate(order.order_date) || "null"}</p>
                     </div>
                     <div className="mb-4">
                         <h3 className="font-bold">Notes</h3>
@@ -95,7 +102,7 @@ export default function MyCartForm() {
                 </div>
 
                 {/* Right Section */}
-                <div className="flex-1 bg-white p-6 rounded-lg shadow-md flex flex-col justify-between">
+                <div className="flex-1 bg-white p-6 rounded-lg flex flex-col justify-between">
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
                         <p className="mb-2">Payment status: {order.payment_status}</p>
