@@ -48,7 +48,7 @@ const RightItem = ({ session }: { session: Session | null }) => {
     return (
         <>
             <NavigationMenuItem>
-                <NavigationMenuLink href="/">
+                <NavigationMenuLink href="/my-cart/">
                     <div className={"font-medium text-lg"}>CART</div>
                 </NavigationMenuLink>
             </NavigationMenuItem>
