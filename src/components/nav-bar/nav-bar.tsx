@@ -13,6 +13,7 @@ import { Menu } from "lucide-react";
 import NotiBell from "./noti-bell";
 import ProfileIcon from "./profile-icon";
 import { Session } from "next-auth";
+import {NotificationPopover} from "@/components/nav-bar/noti";
 
 const LeftItem = ({ session }: { session: Session | null }) => {
     return (
@@ -56,7 +57,7 @@ const RightItem = ({ session }: { session: Session | null }) => {
             <NavigationMenuItem>
                 {session ? (
                     <div className="flex flex-col gap-5 items-center sm:flex-row w-fit hi">
-                        <NotiBell />
+                        <NotificationPopover />
                         <ProfileIcon email ={session.user?.email? (session.user?.email):("")} />
                     </div>
                 ) : (

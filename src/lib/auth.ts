@@ -7,7 +7,6 @@ import { RowDataPacket } from "mysql2";
 interface UserRow extends RowDataPacket {
     Email: string;
     Password: string;
-    Is_active_user: boolean;
     Role: string;
     Phone_number: string;
     User_name: string;
@@ -42,13 +41,6 @@ export const authOptions: NextAuthOptions = {
 
                 if (!passwordMatch) {
                     throw new Error("Password is incorrect");
-                }
-
-                if (!user.Is_active_user) {
-                    await query(
-                        'UPDATE users SET Is_active_user = ? WHERE Email = ?',
-                        [true, user.Email]
-                    );
                 }
 
                 return {
