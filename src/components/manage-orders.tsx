@@ -1,10 +1,9 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import SortButton from './sort-button'; // Import the SortButton
 import { notFound } from 'next/navigation';
 
-// Define the order data type
 interface Order {
   orderId: string;
   customer: string;
@@ -17,6 +16,7 @@ interface Order {
 
 export function ManageOrders() {
   const [sortCriteria, setSortCriteria] = useState('orderId'); // Default sorting by orderId
+  const [sortOrder, setSortOrder] = useState('asc'); // Default sorting order is ascending
   const [orders, setOrders] = useState<Order[]>([]); // State to hold the fetched orders with proper typing
   const [loading, setLoading] = useState(true); // State to show a loading spinner or message
   const [error, setError] = useState<string | null>(null); // Error state to catch any errors
@@ -50,16 +50,19 @@ export function ManageOrders() {
     order.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Function to sort the orders based on the selected criteria
+  // Function to sort the orders based on the selected criteria and sort order
   const sortOrders = (a: Order, b: Order) => {
+    let comparison = 0;
+
     if (sortCriteria === 'orderId') {
-      return a.orderId.localeCompare(b.orderId);
+      comparison = a.orderId.localeCompare(b.orderId);
     } else if (sortCriteria === 'dateOrdered') {
-      return new Date(a.dateOrdered).getTime() - new Date(b.dateOrdered).getTime();
+      comparison = new Date(a.dateOrdered).getTime() - new Date(b.dateOrdered).getTime();
     } else if (sortCriteria === 'dateReceived') {
-      return new Date(a.dateReceived).getTime() - new Date(b.dateReceived).getTime();
+      comparison = new Date(a.dateReceived).getTime() - new Date(b.dateReceived).getTime();
     }
-    return 0;
+
+    return sortOrder === 'asc' ? comparison : -comparison; // Adjust sorting based on order
   };
 
   const sortedOrders = [...filteredOrders].sort(sortOrders);
@@ -80,7 +83,7 @@ export function ManageOrders() {
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
       {/* Search and Buttons */}
       <div className="flex justify-between items-center mb-6">
-        <div className="w-full">
+        <div className="w-[1316px]">
           <input
             type="text"
             value={searchTerm}
@@ -90,7 +93,7 @@ export function ManageOrders() {
           />
         </div>
         <div className="ml-4 flex items-center space-x-4">
-          <SortButton onSort={(criteria) => setSortCriteria(criteria)} />  {/* Pass sorting callback */}
+          <SortButton onSort={(criteria, order) => { setSortCriteria(criteria); setSortOrder(order); }} />  {/* Pass sorting callback */}
         </div>
       </div>
 
