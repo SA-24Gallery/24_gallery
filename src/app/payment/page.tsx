@@ -1,20 +1,20 @@
 import { NavBar } from "@/components/nav-bar/nav-bar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import OrderForm from "@/components/order-form";
+import Payment from "@/components/payment";
 
 
-export default async function OrderPage() {
+export default async function PaymentPage() {
     const session = await getServerSession(authOptions);
 
     return (
-        <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "60px" }}>
+        <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "50px" }}>
             <NavBar session={session} />
-            <div className="flex flex-col items-center gap-12">
+            <div className="flex flex-col items-center gap-[40px]">
                 <h1 className="text-center font-bold text-[32px] h-full">
-                    Order
+                    Thai QR Payment
                 </h1>
-                <OrderForm/>
+                <Payment/>
             </div>
         </div>
     );
