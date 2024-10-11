@@ -20,7 +20,7 @@ const LeftItem = ({session}: { session: Session | null }) => {
             {session?.user?.role === "A" ? (
                 <>
                     <NavigationMenuItem>
-                        <NavigationMenuLink href="/">
+                        <NavigationMenuLink href="/manage-orders/">
                             <div className={"font-medium text-lg"}>MANAGE ORDERS</div>
                         </NavigationMenuLink>
                     </NavigationMenuItem>
@@ -28,13 +28,13 @@ const LeftItem = ({session}: { session: Session | null }) => {
             ) : (
                 <>
                     <NavigationMenuItem>
-                        <NavigationMenuLink href="/">
+                        <NavigationMenuLink href="/order/">
                             <div className={"font-medium text-lg"}>ORDER</div>
                         </NavigationMenuLink>
                     </NavigationMenuItem>
 
-                    <NavigationMenuItem>
-                        <NavigationMenuLink href="/">
+                    <NavigationMenuItem> 
+                        <NavigationMenuLink href="/"> 
                             <div className={"font-medium text-lg"}>MY ORDER</div>
                         </NavigationMenuLink>
                     </NavigationMenuItem>

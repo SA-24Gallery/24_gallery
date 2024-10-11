@@ -61,7 +61,7 @@ export function NotificationPopover() {
             }}
         >
             <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[35px] border-none">
+                <Button variant="outline" className="w-[35px] border-none bg-transparent">
                     <NotiBell count={unreadCount} />
                 </Button>
             </PopoverTrigger>
