@@ -1,10 +1,8 @@
-// app/api/notifications/route.ts
-
-import { query } from '@/lib/db'; // ปรับเส้นทางให้ตรงกับไฟล์ db ของคุณ
+import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
-import {authOptions} from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 
 interface Notification extends RowDataPacket {
     Msg_id: number;
@@ -28,10 +26,10 @@ export async function GET(req: Request) {
 
     try {
         const sql = `
-            SELECT n.* 
-            FROM NOTIFIED_MSG n
-            JOIN ORDERS o ON n.Order_id = o.Order_id
-            WHERE o.email = ?
+            SELECT * 
+            FROM NOTIFIED_MSG
+            WHERE email = ?
+            ORDER BY Notified_date DESC
         `;
         const notifications = await query<Notification[]>(sql, [userEmail]);
 
