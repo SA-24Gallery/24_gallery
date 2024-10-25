@@ -18,7 +18,6 @@ export default function MyCartForm() {
     } | null>(null); // Initially, there is no order (empty cart)
 
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [shippingOption, setShippingOption] = useState(""); 
     const shippingCost = shippingOption === "ThailandPost" ? 50 : 0;
 
@@ -26,19 +25,29 @@ export default function MyCartForm() {
     useEffect(() => {
         const fetchOrderData = async () => {
             try {
-                const response = await fetch('/api/orders'); // Adjust this endpoint to match your API
+                const response = await fetch('/api/orders', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                });
+
                 if (!response.ok) {
-                    throw new Error('Failed to fetch order data');
+                    // If the fetch fails, set order to null instead of showing an error
+                    console.error('Failed to fetch order data');
+                    setOrder(null);
+                    return;
                 }
+
                 const data = await response.json();
-                
-                // Assuming data is an array of orders, take the first one
+                // Assuming data is an array of orders, take the first one if available
                 if (data && data.length > 0) {
                     setOrder({
                         order_id: data[0].orderId,
-                        customer_name: data[0].customer, // Adjust based on your backend response
+                        customer_name: data[0].customer,
                         email: data[0].email,
-                        phone: "088-8888888", // Fetch or add phone number as appropriate
+                        phone: "088-8888888",
                         order_date: data[0].dateOrdered,
                         received_date: data[0].dateReceived || "",
                         payment_status: data[0].status,
@@ -48,16 +57,17 @@ export default function MyCartForm() {
                             paper_type: product.paperType,
                             printing_format: product.printingFormat,
                             product_qty: product.productQty,
-                            price_per_unit: product.totalPrice / product.productQty, // Calculate price per unit
+                            price_per_unit: product.totalPrice / product.productQty,
                             url: product.fileUrls,
                         })),
                     });
                 } else {
-                    setOrder(null); // If no orders are found
+                    // If no orders are found, set order to null
+                    setOrder(null);
                 }
-            } catch (err: any) {
-                console.error(err);
-                setError(err.message);
+            } catch (err) {
+                console.error('Error fetching order data:', err);
+                setOrder(null); // Set order to null if there's an error
             } finally {
                 setLoading(false);
             }
@@ -87,10 +97,6 @@ export default function MyCartForm() {
 
     if (loading) {
         return <p>Loading...</p>;
-    }
-
-    if (error) {
-        return <p className="text-red-500">Error: {error}</p>;
     }
 
     return (
@@ -126,7 +132,7 @@ export default function MyCartForm() {
                             </div>
                             <div className="mb-4">
                                 <h3 className="font-bold">Date ordered</h3>
-                                <p>{formatDate(order.order_date) || "null"}</p>
+                                <p>{formatDate(order.order_date) || "N/A"}</p>
                             </div>
                             <div className="mb-4">
                                 <h3 className="font-bold">Date received</h3>
@@ -138,7 +144,7 @@ export default function MyCartForm() {
                             </div>
                         </>
                     ) : (
-                        <p className="text-center text-gray-500">No order created yet. Add a product to start.</p>
+                        <p className="text-center text-gray-500">No items in your cart.</p>
                     )}
                 </div>
 
