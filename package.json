@@ -19,6 +19,7 @@
     "@radix-ui/react-popover": "^1.1.1",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slot": "^1.1.0",
+    "@vercel/postgres": "^0.10.0",
     "aws-sdk": "^2.1691.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
@@ -33,7 +34,8 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",
     "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
