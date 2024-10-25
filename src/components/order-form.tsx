@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import { uploadToS3 } from '@/lib/s3';
 
 const OrderForm = () => {
   const [order, setOrder] = useState<{
@@ -28,7 +27,6 @@ const OrderForm = () => {
     quantity: false,
   });
 
-  // Price list for different sizes
   const priceList: { [key: string]: number } = {
     '2p': 39,
     '4p': 39,
@@ -53,15 +51,26 @@ const OrderForm = () => {
 
   const uploadFiles = async (): Promise<string[]> => {
     setUploading(true);
-    const urls: string[] = [];
-
     try {
-      for (const file of files) {
-        const timestamp = Date.now();
-        const key = `orders/${albumName}/${timestamp}-${file.name}`;
-        const url = await uploadToS3(file, key);
-        urls.push(url);
-      }
+      const urls = await Promise.all(
+        files.map(async (file) => {
+          // Upload the file directly
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('File upload failed');
+          }
+
+          const { url } = await response.json();
+          return url;
+        })
+      );
       setUploadedUrls(urls);
       return urls;
     } catch (error) {
@@ -92,9 +101,8 @@ const OrderForm = () => {
 
     try {
       const fileUrls = await uploadFiles();
-      const userEmail = 'user@example.com'; // Retrieve this dynamically if needed
+      const userEmail = 'user@example.com'; // Replace this with actual user email retrieval logic
 
-      // Prepare the product data
       const product = {
         Size: size,
         Paper_type: paperType,
@@ -107,13 +115,11 @@ const OrderForm = () => {
 
       setOrder((prevOrder) => {
         if (prevOrder) {
-          // If an order already exists, add the product to the existing order
           return {
             ...prevOrder,
             products: [...prevOrder.products, product],
           };
         } else {
-          // If no order exists, create a new order with the product
           return {
             order_id: '12345', // Generate a unique ID or fetch it dynamically
             customer_name: 'Carina Ningning',
