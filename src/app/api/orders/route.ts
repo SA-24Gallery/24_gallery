@@ -13,10 +13,58 @@ type OrderBody = {
   printingFormat: string;
   quantity: number;
   totalPrice: number;
-  email: string;
 };
 
-// POST request handler: Create a new order
+// Function to get the next product ID
+async function getNextProductId(): Promise<string> {
+  const prefix = 'prd';
+  const numberLength = 5;
+
+  const result = await query<RowDataPacket[]>(
+      `SELECT product_id FROM Product
+     ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+  );
+
+  let nextProductId = '';
+
+  if (result.length > 0) {
+    const lastProductId = result[0].product_id;
+    const numberPart = lastProductId.substring(prefix.length);
+    const nextNumber = parseInt(numberPart, 10) + 1;
+    const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
+    nextProductId = prefix + nextNumberPadded;
+  } else {
+    nextProductId = prefix + '00001';
+  }
+
+  return nextProductId;
+}
+
+async function getNextOrderId(): Promise<string> {
+  const prefix = 'ord';
+  const numberLength = 5;
+
+  const result = await query<RowDataPacket[]>(
+      `SELECT order_id FROM ORDER
+     ORDER BY CAST(SUBSTRING(order_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+  );
+
+  let nextOrderId = '';
+
+  if (result.length > 0) {
+    const lastOrderId = result[0].product_id;
+    const numberPart = lastOrderId.substring(prefix.length);
+    const nextNumber = parseInt(numberPart, 10) + 1;
+    const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
+    nextOrderId = prefix + nextNumberPadded;
+  } else {
+    nextOrderId = prefix + '00001';
+  }
+
+  return nextOrderId;
+}
+
+// POST request handler: Create or update an order
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,78 +81,100 @@ export async function POST(request: Request) {
       printingFormat,
       quantity,
       totalPrice,
-      email,
     } = body;
 
-    // Insert the order into the Orders table
-    const insertOrderSql = `
-      INSERT INTO orders (
-        order_date,
-        email,
-        shipping_option,
-        payment_status,
-        payment_deadline
-      ) VALUES (NOW(), ?, 'standard', 'pending', DATE_ADD(NOW(), INTERVAL 7 DAY))
-    `;
+    const email = session.user.email;
 
-    const result = await query<ResultSetHeader>(
-      insertOrderSql,
-      [email]
+    // Check for existing order with payment_status 'N' (Not paid)
+    const existingOrder = await query<RowDataPacket[]>(
+        `SELECT Order_id FROM orders WHERE email = ? AND payment_status = 'N'`,
+        [email]
     );
+
+    let orderId;
+
+    if (existingOrder.length > 0) {
+      // Use existing Order_id
+      orderId = existingOrder[0].Order_id;
+    } else {
+      // Insert new order
+      const insertOrderSql = `
+        INSERT INTO orders (
+          order_id,  
+          order_date,
+          email,
+          shipping_option,
+          payment_status,
+          payment_deadline
+        ) VALUES (?, NOW(), ?, 'standard', 'N', DATE_ADD(NOW(), INTERVAL 7 DAY))
+      `;
+
+      const result = await query<ResultSetHeader>(
+          insertOrderSql,
+          [getNextOrderId(), email]
+      );
+      orderId = result.insertId;
+
+      // Insert initial status into the Status table
+      const insertStatusSql = `
+        INSERT INTO Status (Order_id, Status_name, Status_date, Is_completed_status)
+        VALUES (?, 'Pending', NOW(), 0)
+      `;
+
+      await query<ResultSetHeader>(insertStatusSql, [orderId]);
+    }
+
+    // Get the next product ID
+    const productId = await getNextProductId();
 
     // Insert product details associated with the order
     const insertProductSql = `
       INSERT INTO Product (
+        product_id,
         album_name,
         url,
         size,
         paper_type,
         printing_format,
-        quantity,
+        Product_qty,
         price,
         order_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await query<ResultSetHeader>(
-      insertProductSql,
-      [
-        albumName,
-        JSON.stringify(fileUrls),
-        size,
-        paperType,
-        printingFormat,
-        quantity,
-        totalPrice,
-        result.insertId, // this is the order ID
-      ]
+        insertProductSql,
+        [
+          productId,
+          albumName,
+          JSON.stringify(fileUrls),
+          size,
+          paperType,
+          printingFormat,
+          quantity,
+          totalPrice,
+          orderId, // Use the existing or new Order_id
+        ]
     );
 
-    // Insert initial status into the Status table
-    const insertStatusSql = `
-      INSERT INTO Status (Order_id, Status_name, Status_date, Is_completed_status)
-      VALUES (?, 'Pending', NOW(), 0)
-    `;
-
-    await query<ResultSetHeader>(insertStatusSql, [result.insertId]);
-
     return NextResponse.json(
-      { 
-        success: true, 
-        orderId: result.insertId,
-        message: 'Order created successfully' 
-      }, 
-      { status: 201 }
+        {
+          success: true,
+          orderId: orderId,
+          message: 'Order updated successfully'
+        },
+        { status: 200 }
     );
 
   } catch (error: any) {
-    console.error('Error creating order:', error);
+    console.error('Error creating or updating order:', error);
     return NextResponse.json(
-      { error: "Error creating order", message: error.message },
-      { status: 500 }
+        { error: "Error creating or updating order", message: error.message },
+        { status: 500 }
     );
   }
 }
+
 
 // GET request handler: Fetch orders
 export async function GET(request: Request) {
