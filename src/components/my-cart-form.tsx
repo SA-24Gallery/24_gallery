@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation'; // Correct import from next/navigation
 import ProductItem from '@/components/order-details/product-item';
 import { Button } from "@/components/ui/button";
 
 export default function MyCartForm() {
+    const router = useRouter(); // Initialize router using next/navigation
+
     // State for managing the order
     const [order, setOrder] = useState<{
         order_id: string;
@@ -15,7 +18,7 @@ export default function MyCartForm() {
         received_date: string;
         payment_status: string;
         products: any[];
-    } | null>(null); // Initially, there is no order (empty cart)
+    } | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [shippingOption, setShippingOption] = useState(""); 
@@ -34,21 +37,19 @@ export default function MyCartForm() {
                 });
 
                 if (!response.ok) {
-                    // If the fetch fails, set order to null instead of showing an error
                     console.error('Failed to fetch order data');
                     setOrder(null);
                     return;
                 }
 
                 const data = await response.json();
-                // Assuming data is an array of orders, take the first one if available
                 if (data && data.length > 0) {
                     setOrder({
                         order_id: data[0].orderId,
                         customer_name: data[0].customer,
                         email: data[0].email,
                         phone: "088-8888888",
-                        order_date: data[0].dateOrdered,
+                        order_date: data[0].dateOrdered || "",
                         received_date: data[0].dateReceived || "",
                         payment_status: data[0].status,
                         products: data.map((product: any) => ({
@@ -62,12 +63,11 @@ export default function MyCartForm() {
                         })),
                     });
                 } else {
-                    // If no orders are found, set order to null
                     setOrder(null);
                 }
             } catch (err) {
                 console.error('Error fetching order data:', err);
-                setOrder(null); // Set order to null if there's an error
+                setOrder(null);
             } finally {
                 setLoading(false);
             }
@@ -75,6 +75,12 @@ export default function MyCartForm() {
 
         fetchOrderData();
     }, []);
+
+    const handlePayment = () => {
+        if (order && order.products.length > 0) {
+            router.push(`/payment?orderId=${order.order_id}`);
+        }
+    };
 
     const handleRemoveProduct = (index: number) => {
         setOrder(prevOrder => {
@@ -191,8 +197,14 @@ export default function MyCartForm() {
                     </div>
 
                     <div className="flex justify-between items-center mt-4">
-                        <p className="text-xl font-bold">Total price: {totalPrice || 0} Baht</p>
-                        <Button variant="default" size="default" disabled={!order || order.products.length === 0}>
+                        <p className="text-[20px] font-bold">Total price: {totalPrice || 0} Baht</p>
+                        <Button 
+                            variant="default" 
+                            size="default" 
+                            disabled={!order || order.products.length === 0} 
+                            onClick={handlePayment}
+                            className="text-[20px] px-10 py-6 font-bold" 
+                        >
                             Pay
                         </Button>
                     </div>
