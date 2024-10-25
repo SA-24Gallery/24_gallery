@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import {createNewOrder} from "@/app/api/create-new-order/route";
 
 // Define the OrderBody type for creating an order
 type OrderBody = {
@@ -14,56 +15,6 @@ type OrderBody = {
   quantity: number;
   totalPrice: number;
 };
-
-// Function to get the next product ID
-async function getNextProductId(): Promise<string> {
-  const prefix = 'prd';
-  const numberLength = 5;
-
-  const result = await query<RowDataPacket[]>(
-      `SELECT product_id FROM Product
-     ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
-  );
-
-  let nextProductId = '';
-
-  if (result.length > 0) {
-    const lastProductId = result[0].product_id;
-    const numberPart = lastProductId.substring(prefix.length);
-    const nextNumber = parseInt(numberPart, 10) + 1;
-    const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
-    nextProductId = prefix + nextNumberPadded;
-  } else {
-    nextProductId = prefix + '00001';
-  }
-
-  return nextProductId;
-}
-
-async function getNextOrderId(): Promise<string> {
-  const prefix = 'ord';
-  const numberLength = 5;
-
-  const result = await query<RowDataPacket[]>(
-      `SELECT order_id FROM ORDER
-     ORDER BY CAST(SUBSTRING(order_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
-  );
-
-  let nextOrderId = '';
-
-  if (result.length > 0) {
-    const lastOrderId = result[0].product_id;
-    const numberPart = lastOrderId.substring(prefix.length);
-    const nextNumber = parseInt(numberPart, 10) + 1;
-    const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
-    nextOrderId = prefix + nextNumberPadded;
-  } else {
-    nextOrderId = prefix + '00001';
-  }
-
-  return nextOrderId;
-}
-
 // POST request handler: Create or update an order
 export async function POST(request: Request) {
   try {
@@ -83,11 +34,40 @@ export async function POST(request: Request) {
       totalPrice,
     } = body;
 
+    // Function to get the next product ID
+    const getNextProductId = async (): Promise<string> => {
+      const prefix = 'prd';
+      const numberLength = 5;
+
+      const result = await query<RowDataPacket[]>(
+          `SELECT product_id FROM Product
+     ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+      );
+
+      let nextProductId = '';
+
+      if (result.length > 0) {
+        const lastProductId = result[0].product_id;
+        const numberPart = lastProductId.substring(prefix.length);
+        const nextNumber = parseInt(numberPart, 10) + 1;
+        const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
+        nextProductId = prefix + nextNumberPadded;
+      } else {
+        nextProductId = prefix + '00001';
+      }
+
+      return nextProductId;
+    };
+
     const email = session.user.email;
+
+    if (!email) {
+      return NextResponse.json({ message: 'User email not found' }, { status: 400 });
+    }
 
     // Check for existing order with payment_status 'N' (Not paid)
     const existingOrder = await query<RowDataPacket[]>(
-        `SELECT Order_id FROM orders WHERE email = ? AND payment_status = 'N'`,
+        `SELECT Order_id FROM orders WHERE email = ? AND order_date IS NULL`,
         [email]
     );
 
@@ -97,31 +77,8 @@ export async function POST(request: Request) {
       // Use existing Order_id
       orderId = existingOrder[0].Order_id;
     } else {
-      // Insert new order
-      const insertOrderSql = `
-        INSERT INTO orders (
-          order_id,  
-          order_date,
-          email,
-          shipping_option,
-          payment_status,
-          payment_deadline
-        ) VALUES (?, NOW(), ?, 'standard', 'N', DATE_ADD(NOW(), INTERVAL 7 DAY))
-      `;
-
-      const result = await query<ResultSetHeader>(
-          insertOrderSql,
-          [getNextOrderId(), email]
-      );
-      orderId = result.insertId;
-
-      // Insert initial status into the Status table
-      const insertStatusSql = `
-        INSERT INTO Status (Order_id, Status_name, Status_date, Is_completed_status)
-        VALUES (?, 'Pending', NOW(), 0)
-      `;
-
-      await query<ResultSetHeader>(insertStatusSql, [orderId]);
+      // Create new order using the separated functionality
+      orderId = await createNewOrder(email);
     }
 
     // Get the next product ID
@@ -153,7 +110,7 @@ export async function POST(request: Request) {
           printingFormat,
           quantity,
           totalPrice,
-          orderId, // Use the existing or new Order_id
+          orderId,
         ]
     );
 
