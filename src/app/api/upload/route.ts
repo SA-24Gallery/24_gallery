@@ -13,7 +13,6 @@ const s3Client = new S3Client({
 export async function POST(req: NextRequest) {
   try {
     const chunks: Uint8Array[] = [];
-
     const reader = req.body?.getReader();
     if (!reader) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -30,7 +29,15 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.concat(chunks);
     const contentType = req.headers.get('content-type') || 'application/octet-stream';
-    const fileKey = `uploads/${Date.now()}-uploaded-file`;
+    
+    // Generate a unique filename with timestamp and random string
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const extension = contentType.split('/')[1] || 'jpg';
+    const fileName = `${timestamp}-${randomString}.${extension}`;
+    
+    // Create the file path in the receipt folder
+    const fileKey = `receipt/${fileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME!,
