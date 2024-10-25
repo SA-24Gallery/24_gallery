@@ -50,7 +50,7 @@ const RightItem = ({session}: { session: Session | null }) => {
             {session ? (
                 <>
                     <NavigationMenuItem>
-                        <div className="flex flex-col gap-5 items-center sm:flex-row w-fit hi">
+                        <div className="flex flex-col gap-5 items-center sm:flex-row w-fit">
                             {session.user?.role == 'A'? (
                                 <></>
                             ):(
@@ -64,9 +64,13 @@ const RightItem = ({session}: { session: Session | null }) => {
                     </NavigationMenuItem>
                 </>
             ) : (
-                <NavigationMenuItem>
+                <NavigationMenuItem className={"flex flex-col gap-5 items-center sm:flex-row w-fit"}>
                     <NavigationMenuLink href="/login/">
                         <div className={"font-medium text-lg"}>LOG IN</div>
+                    </NavigationMenuLink>
+
+                    <NavigationMenuLink href="/register/">
+                        <div className={"font-medium text-lg"}>REGISTER</div>
                     </NavigationMenuLink>
 
                 </NavigationMenuItem>
