@@ -125,7 +125,7 @@ export async function GET(request: Request) {
       sql = `
         SELECT 
           o.Order_id AS orderId,
-          u.User_name AS customerName,
+          u.User_name AS customerName,  -- Fetch the customer name here
           p.album_name AS albumName,
           p.url AS fileUrls,
           p.size,
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
           DATE_FORMAT(o.Received_date, '%M %d, %Y') AS receivedDate,
           s.Status_name AS status
         FROM orders o
-        LEFT JOIN Users u ON o.Email = u.Email
+        LEFT JOIN Users u ON o.Email = u.Email  -- Join Users table to get customer name
         LEFT JOIN Product p ON o.Order_id = p.Order_id
         LEFT JOIN (
           SELECT s1.Order_id, s1.Status_name
@@ -200,6 +200,7 @@ export async function GET(request: Request) {
 
     const transformedOrders = orders.map(order => ({
       ...order,
+      customer: order.customerName, // Map customerName to customer for frontend
       fileUrls: Array.isArray(order.fileUrls) ? order.fileUrls : [order.fileUrls], // ensure it's an array
       dateOrdered: order.orderDate, // map SQL `orderDate` to `dateOrdered`
       dateReceived: order.receivedDate, // map SQL `receivedDate` to `dateReceived`
@@ -223,3 +224,97 @@ export async function GET(request: Request) {
     );
   }
 }
+
+
+// Handler for PUT requests to update order status
+export async function PUT(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || session.user.role !== 'A') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { orderId, status, receivedDate } = body;
+
+    // Update order status
+    const updateOrderSql = `
+      UPDATE orders 
+      SET Received_date = ?
+      WHERE Order_id = ?
+    `;
+    await query<ResultSetHeader>(updateOrderSql, [receivedDate, orderId]);
+
+    // Insert new status
+    const insertStatusSql = `
+      INSERT INTO STATUS (Order_id, Status_name, Status_date)
+      VALUES (?, ?, NOW())
+    `;
+    await query<ResultSetHeader>(insertStatusSql, [orderId, status]);
+
+    return NextResponse.json(
+      { success: true, message: 'Order updated successfully' },
+      { status: 200 }
+    );
+
+  } catch (error: any) {
+    console.error('Error updating order:', error);
+    return NextResponse.json(
+      { error: "Error updating order", message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Handler for DELETE requests to cancel orders
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get('orderId');
+
+    if (!orderId) {
+      return NextResponse.json(
+        { error: "Order ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify user has permission to cancel this order
+    if (session.user.role !== 'A') {
+      const orderSql = `SELECT email FROM orders WHERE Order_id = ?`;
+      const [orderResult] = await query<RowDataPacket[]>(orderSql, [orderId]);
+      
+      if (!orderResult || orderResult[0].email !== session.user.email) {
+        return NextResponse.json(
+          { error: "Unauthorized to cancel this order" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Update order status to cancelled
+    const insertStatusSql = `
+      INSERT INTO STATUS (Order_id, Status_name, Status_date)
+      VALUES (?, 'Cancelled', NOW())
+    `;
+    await query<ResultSetHeader>(insertStatusSql, [orderId]);
+
+    return NextResponse.json(
+      { success: true, message: 'Order cancelled successfully' },
+      { status: 200 }
+    );
+
+  } catch (error: any) {
+    console.error('Error cancelling order:', error);
+    return NextResponse.json(
+      { error: "Error cancelling order", message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
