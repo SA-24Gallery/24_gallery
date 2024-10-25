@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
         const encryptPassword = await bcrypt.hash(password, 10);
 
-        const sql = 'INSERT INTO Users (Email, Phone_Number, User_name, Password, Is_active_user, Role) VALUES (?, ?, ?, ?, False, "U");';
+        const sql = 'INSERT INTO Users (Email, Phone_Number, User_name, Password, Role) VALUES (?, ?, ?, ?, "U");';
         await query(sql, [email, phone_number, name, encryptPassword]);
 
         return NextResponse.json({ success: true });
