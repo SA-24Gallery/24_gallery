@@ -106,6 +106,10 @@ export default function ProfileContent({ params }: { params: { email: string } }
         }
     };
 
+    const handleMyOrdersClick = () => {
+        router.push("/my-orders-list");  
+    };
+
     return (
         <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "160px" }}>
             <NavBar session={session} />
@@ -173,7 +177,7 @@ export default function ProfileContent({ params }: { params: { email: string } }
                         </div>
 
                         <div className="flex flex-col w-fit h-fit items-center gap-[20px]">
-                            <Button className="w-[198px] rounded-[20px] h-[52px] text-xl font-bold">
+                            <Button className="w-[198px] rounded-[20px] h-[52px] text-xl font-bold" onClick={handleMyOrdersClick}>
                                 My order
                             </Button>
                             <LogOutButton />
