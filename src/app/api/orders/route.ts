@@ -1,47 +1,59 @@
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
-// Handler for GET requests to fetch specific order data for admin
 export async function GET() {
   try {
-    console.log('Admin API request to fetch specific order data'); // Log API request
+    const session = await getServerSession(authOptions);
 
-    // SQL query to fetch specific fields from the orders table, users table, and join with the STATUS table
-    const sql = `
-    SELECT 
-        o.Order_id AS orderId, 
-        u.User_name AS customer,  -- Fetch user_name from USERS table
-        o.Email AS email, 
-        o.Shipping_option AS shippingOption, 
-        DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,  -- Format date
-        DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,  -- Format date
-        s.Status_name AS statusName 
-        FROM orders o
-        LEFT JOIN USERS u ON o.Email = u.Email  -- Join with USERS table on Email
-        LEFT JOIN STATUS s ON o.Order_id = s.Order_id`; 
+    if (!session || !session.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Log SQL query for debugging
-    console.log('Executing SQL query for admin:', sql);
 
-    // Execute the query to fetch the specific data for the admin page
-    const orders = await query<RowDataPacket[]>(sql);
+    let sql = '';
 
-    // Log the query result for debugging
-    console.log('Orders fetched:', orders);
+    if (session.user.role === 'A') {
+      sql = `SELECT o.Order_id AS orderId, u.User_name AS customer, o.Email AS email, o.Shipping_option AS delivery, 
+             DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,  -- Format date as 'October 01, 2024'
+             DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,  -- Format date as 'October 05, 2024'
+             s.Status_name AS status 
+             FROM orders o 
+             LEFT JOIN USERS u ON o.Email = u.Email 
+             LEFT JOIN STATUS s ON o.Order_id = s.Order_id;`;
+    } else if (session.user.role === 'U') {
+      const userEmail = session.user.email;
+            sql = `
+        SELECT o.Order_id AS orderId, o.Email AS email, o.Shipping_option AS delivery, 
+               DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,  -- Format date as 'October 01, 2024'
+               DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,  -- Format date as 'October 05, 2024'
+               s.Status_name AS status 
+        FROM orders o 
+        LEFT JOIN (
+          SELECT s1.Order_id, s1.Status_name
+          FROM STATUS s1
+          WHERE s1.Status_date = (
+            SELECT MAX(s2.Status_date) 
+            FROM STATUS s2 
+            WHERE s2.Order_id = s1.Order_id
+          )
+        ) s ON o.Order_id = s.Order_id
+        WHERE o.Email = ?;
+      `;  
+    }
 
-    // Check if any records were found
+  
+    const orders = await query<RowDataPacket[]>(sql, [session.user.role === 'U' ? session.user.email : null]);
+
     if (!orders || orders.length === 0) {
-      console.log('No orders found');
       return NextResponse.json({ message: 'No orders found' }, { status: 404 });
     }
 
-    // Return the fetched data as JSON for the admin page
     return NextResponse.json(orders, { status: 200 });
   } catch (error: any) {
-    // Log error details for debugging
-    console.error('Error fetching order data for admin:', error.message);
-    console.error(error.stack); // Log the full stack trace for deeper debugging
-    return NextResponse.json({ error: "Error fetching order data", errorMessage: error.message }, { status: 500 });
+    console.error('Error fetching orders:', error);
+    return NextResponse.json({ error: "Error fetching orders", errorMessage: error.message }, { status: 500 });
   }
 }

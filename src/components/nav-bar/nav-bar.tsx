@@ -34,7 +34,7 @@ const LeftItem = ({session}: { session: Session | null }) => {
                     </NavigationMenuItem>
 
                     <NavigationMenuItem> 
-                        <NavigationMenuLink href="/"> 
+                        <NavigationMenuLink href="/my-orders-list/"> 
                             <div className={"font-medium text-lg"}>MY ORDER</div>
                         </NavigationMenuLink>
                     </NavigationMenuItem>
