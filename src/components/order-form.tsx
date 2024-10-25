@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { uploadToS3 } from '@/lib/s3';
-// Import any authentication or user context if available
-// import { useAuth } from '@/context/AuthContext';
 
 const OrderForm = () => {
-  // Assuming you have a user context to get the actual email
-  // const { user } = useAuth();
+  const [order, setOrder] = useState<{
+    order_id: string;
+    customer_name: string;
+    email: string;
+    products: any[];
+  } | null>(null);
+
   const [albumName, setAlbumName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
@@ -42,12 +45,6 @@ const OrderForm = () => {
     '16 x 20': 300,
   };
 
-  // Calculate the total price when the size, quantity, or files change
-  useEffect(() => {
-    // Optional: If you still need total price on the frontend for display
-    // You can calculate it here, but it's not sent to the backend
-  }, [size, quantity, files]);
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
@@ -59,7 +56,6 @@ const OrderForm = () => {
     const urls: string[] = [];
 
     try {
-      console.log('Starting file upload...');
       for (const file of files) {
         const timestamp = Date.now();
         const key = `orders/${albumName}/${timestamp}-${file.name}`;
@@ -95,49 +91,41 @@ const OrderForm = () => {
     }
 
     try {
-      // Upload files to S3
       const fileUrls = await uploadFiles();
+      const userEmail = 'user@example.com'; // Retrieve this dynamically if needed
 
-      // Retrieve the actual user email
-      // Replace this with your actual method of getting the user's email
-      const userEmail = 'user@example.com'; // e.g., user.email from context
-
-      // Create products array with correctly mapped keys
-      const products = fileUrls.map(fileUrl => ({
+      // Prepare the product data
+      const product = {
         Size: size,
         Paper_type: paperType,
         Product_qty: quantity,
         Printing_format: printingFormat,
         Price: priceList[size] * quantity,
         Album_name: albumName,
-        Url: fileUrl
-      }));
-
-      // Create order data
-      const orderData = {
-        products,
-        Email: userEmail,
-        // Add other order fields if necessary, e.g., Shipping_option, Note, etc.
+        Url: fileUrls,
       };
 
-      // Send order data to your API
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
+      setOrder((prevOrder) => {
+        if (prevOrder) {
+          // If an order already exists, add the product to the existing order
+          return {
+            ...prevOrder,
+            products: [...prevOrder.products, product],
+          };
+        } else {
+          // If no order exists, create a new order with the product
+          return {
+            order_id: '12345', // Generate a unique ID or fetch it dynamically
+            customer_name: 'Carina Ningning',
+            email: userEmail,
+            products: [product],
+          };
+        }
       });
 
-      const responseData = await response.json();
-      console.log('API Response:', responseData);
+      alert('Product added to the order successfully!');
 
-      if (!response.ok) {
-        throw new Error(`Failed to create order: ${responseData.message}`);
-      }
-
-      alert('Order submitted successfully!');
-      // Reset form
+      // Reset form fields
       setAlbumName('');
       setFiles([]);
       setUploadedUrls([]);
@@ -148,7 +136,7 @@ const OrderForm = () => {
 
     } catch (error: any) {
       console.error('Error in handleSubmit:', error);
-      alert(`Failed to submit order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Failed to add product: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -285,14 +273,13 @@ const OrderForm = () => {
           )}
         </div>
 
-        {/* Total price (optional display) */}
-        {/* If you still want to display the total price on the frontend */}
+        {/* Total price display */}
         <div className="flex justify-end items-center mb-2">
           <label className="text-[20px] font-bold mr-3">Total price:</label>
           <p className="text-[20px] font-bold text-red-500">{priceList[size] && quantity > 0 ? priceList[size] * quantity * files.length : 0} Baht</p>
         </div>
 
-        {/* Submit Order button */}
+        {/* Submit button */}
         <div className="flex justify-end w-full mt-[-20px]">
           <button
             type="submit"
