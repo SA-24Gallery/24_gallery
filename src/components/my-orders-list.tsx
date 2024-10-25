@@ -1,12 +1,12 @@
 "use client";
-
+import { useRouter } from 'next/navigation'; 
 import React, { useState, useEffect } from 'react';
 
 interface Order {
   orderId: string;
   customer: string;
   email: string;
-  delivery: string; 
+  shippingOption: string; 
   dateOrdered: string;
   dateReceived: string;
   status: string; 
@@ -20,6 +20,7 @@ export function MyOrdersList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'orderId' | 'dateOrdered' | 'dateReceived'>('orderId');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default ascending sort
+  const router = useRouter(); // Using Next.js router for navigation
 
   useEffect(() => {
     async function fetchOrders() {
@@ -29,7 +30,6 @@ export function MyOrdersList() {
           throw new Error(`Failed to fetch orders: ${response.statusText}`);
         }
         const data: Order[] = await response.json();
-
         const latestOrders = getLatestOrders(data);
         setOrders(latestOrders);
       } catch (error: any) {
@@ -88,6 +88,11 @@ export function MyOrdersList() {
     }
   };
 
+  const handleRowClick = (orderId: string) => {
+    // Navigate to the order details page when the row is clicked
+    router.push(`/my-order-details?orderId=${orderId}`);
+  };
+
   if (loading) {
     return <div>Loading your orders...</div>;
   }
@@ -100,7 +105,7 @@ export function MyOrdersList() {
     .filter(order =>
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase())
     )
-    .sort(sortOrders); 
+    .sort(sortOrders);
 
   return (
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
@@ -135,11 +140,15 @@ export function MyOrdersList() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredOrders.map((order, index) => (
-              <tr key={index} className="hover:bg-gray-100">
+              <tr
+                key={index}
+                className="hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleRowClick(order.orderId)} // Attach click event to entire row
+              >
                 <td className="px-6 py-4">{order.orderId}</td>
                 <td className="px-6 py-4">{formatDate(order.dateOrdered)}</td>
                 <td className="px-6 py-4">{formatDate(order.dateReceived)}</td>
-                <td className="px-6 py-4">{order.delivery}</td> {/* Display delivery option */}
+                <td className="px-6 py-4">{order.shippingOption}</td> {/* Display delivery option */}
                 <td className="px-6 py-4">{order.status}</td> {/* Display status */}
               </tr>
             ))}

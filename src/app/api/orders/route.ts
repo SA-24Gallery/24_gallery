@@ -36,6 +36,14 @@ export async function POST(request: Request) {
       email,
     } = body;
 
+    // ตรวจสอบว่า orderId มีอยู่แล้วหรือไม่
+    const checkOrderSql = 'SELECT * FROM orders WHERE email = ? AND album_name = ?';
+    const existingOrder = await query<RowDataPacket[]>(checkOrderSql, [email, albumName]);
+
+    if (existingOrder.length > 0) {
+      return NextResponse.json({ message: 'Order already exists' }, { status: 400 });
+    }
+
     // Insert the order into the Orders table
     const insertOrderSql = `
       INSERT INTO orders (
@@ -122,24 +130,26 @@ export async function GET(request: Request) {
     const queryParams: any[] = [];
 
     if (session.user.role === 'A') {
+      // สำหรับ admin: ดึงข้อมูลทั้งหมดรวมถึงชื่อและเบอร์โทร
       sql = `
         SELECT 
           o.Order_id AS orderId,
-          u.User_name AS customerName,  -- Fetch the customer name here
-          p.album_name AS albumName,
-          p.url AS fileUrls,
-          p.size,
-          p.paper_type AS paperType,
-          p.printing_format AS printingFormat,
+          u.User_name AS customer,  -- Fetch the customer name for admin
+          u.Phone_number AS phone,  -- Fetch the phone number for admin
+          p.Album_name AS albumName,
+          p.Url AS fileUrls,
+          p.Size,
+          p.Paper_type AS paperType,
+          p.Printing_format AS printingFormat,
           p.Product_qty AS productQty,
-          p.price AS totalPrice,
+          p.Price AS totalPrice,
           o.Email AS email,
           o.Shipping_option AS shippingOption,
-          DATE_FORMAT(o.Order_date, '%M %d, %Y') AS orderDate,
-          DATE_FORMAT(o.Received_date, '%M %d, %Y') AS receivedDate,
+          DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,
+          DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,
           s.Status_name AS status
-        FROM orders o
-        LEFT JOIN Users u ON o.Email = u.Email  -- Join Users table to get customer name
+        FROM Orders o
+        LEFT JOIN Users u ON o.Email = u.Email  -- Join Users table to get customer name and phone
         LEFT JOIN Product p ON o.Order_id = p.Order_id
         LEFT JOIN (
           SELECT s1.Order_id, s1.Status_name
@@ -153,22 +163,26 @@ export async function GET(request: Request) {
         WHERE 1=1
       `;
     } else {
+      // สำหรับ user: ดึงข้อมูลของ user ที่เข้าสู่ระบบเท่านั้น
       sql = `
         SELECT 
           o.Order_id AS orderId,
-          p.album_name AS albumName,
-          p.url AS fileUrls,
-          p.size,
-          p.paper_type AS paperType,
-          p.printing_format AS printingFormat,
+          u.User_name AS customer,  -- Fetch the customer name for user
+          u.Phone_number AS phone,  -- Fetch the phone number for user
+          p.Album_name AS albumName,
+          p.Url AS fileUrls,
+          p.Size,
+          p.Paper_type AS paperType,
+          p.Printing_format AS printingFormat,
           p.Product_qty AS productQty,
-          p.price AS totalPrice,
+          p.Price AS totalPrice,
           o.Email AS email,
           o.Shipping_option AS shippingOption,
-          DATE_FORMAT(o.Order_date, '%M %d, %Y') AS orderDate,
-          DATE_FORMAT(o.Received_date, '%M %d, %Y') AS receivedDate,
+          DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,
+          DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,
           s.Status_name AS status
-        FROM orders o
+        FROM Orders o
+        LEFT JOIN Users u ON o.Email = u.Email  -- Join Users table to get customer name and phone
         LEFT JOIN Product p ON o.Order_id = p.Order_id
         LEFT JOIN (
           SELECT s1.Order_id, s1.Status_name
@@ -190,7 +204,7 @@ export async function GET(request: Request) {
     }
 
     if (email && session.user.role === 'A') {
-      sql += ` AND o.email = ?`;
+      sql += ` AND o.Email = ?`;
       queryParams.push(email);
     }
 
@@ -199,12 +213,23 @@ export async function GET(request: Request) {
     const orders = await query<RowDataPacket[]>(sql, queryParams);
 
     const transformedOrders = orders.map(order => ({
-      ...order,
-      customer: order.customerName, // Map customerName to customer for frontend
-      fileUrls: Array.isArray(order.fileUrls) ? order.fileUrls : [order.fileUrls], // ensure it's an array
-      dateOrdered: order.orderDate, // map SQL `orderDate` to `dateOrdered`
-      dateReceived: order.receivedDate, // map SQL `receivedDate` to `dateReceived`
-      delivery: order.shippingOption, // map SQL `shippingOption` to `delivery`
+      orderId: order.orderId,
+      customer: order.customer,  // Map customer name
+      phone: order.phone,        // Map phone number
+      email: order.email,
+      shippingOption: order.shippingOption,
+      dateOrdered: order.dateOrdered,
+      dateReceived: order.dateReceived,
+      products: orders.filter(o => o.orderId === order.orderId).map(product => ({
+        albumName: product.albumName,
+        fileUrls: Array.isArray(product.fileUrls) ? product.fileUrls : [product.fileUrls],
+        size: product.size,
+        paperType: product.paperType,
+        printingFormat: product.printingFormat,
+        quantity: product.productQty,
+        price: product.totalPrice
+      })),
+      status: order.status
     }));
 
     if (!transformedOrders.length) {
