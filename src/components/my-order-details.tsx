@@ -86,10 +86,10 @@ export default function MyOrderDetailsPage() {
           <div>
             <h3 className="font-bold mb-1">Optional Notes or Address</h3>
             <textarea
-              value={order.notes}
+              value={order.note || "No additional notes provided."} // ดึงข้อมูล Note ออกมาแสดง
               className="w-full p-2 border border-gray-300 rounded-md bg-gray-50"
               rows={3}
-              readOnly
+              readOnly 
             />
           </div>
           <div>
