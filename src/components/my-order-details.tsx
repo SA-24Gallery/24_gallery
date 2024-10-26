@@ -3,7 +3,10 @@
 import React, { useEffect, useState } from "react";
 import ProductItem from "@/components/order-details/product-item";
 import OrderTimeline from "@/components/order-details/order-timeline";
-import { useSearchParams } from "next/navigation"; // For retrieving query parameters
+import { useSearchParams } from "next/navigation";
+import {Button} from "@/components/ui/button"; // For retrieving query parameters
+import { useRouter } from 'next/navigation';
+
 
 export default function MyOrderDetailsPage() {
   const [order, setOrder] = useState<any | null>(null);
@@ -88,6 +91,8 @@ export default function MyOrderDetailsPage() {
   const totalPrice = order.products.reduce((total: number, product: any) => total + (product.price * product.quantity), 0) + shippingCost;
 
   const steps = order.statusTimeline || [];
+
+  const router = useRouter();
 
   return (
       <div className="w-full flex justify-center">
@@ -175,6 +180,20 @@ export default function MyOrderDetailsPage() {
               ) : (
                   <p className="text-center text-gray-500">No items in the order.</p>
               )}
+
+              <div className="flex justify-between items-center mt-4">
+                <p className="text-[20px] font-bold">Total price: {totalPrice || 0} Baht</p>
+                {order.paymentStatus == 'N' && (
+                    <Button
+                        variant="default"
+                        size="default"
+                        className="text-[20px] px-10 py-6 font-bold"
+                        onClick={() => (router.push(`/payment?orderId=${order.orderId}`))}
+                    >
+                      Pay
+                    </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
