@@ -49,51 +49,52 @@ export default function ManageOrderDetails() {
     const searchParams = useSearchParams();
     const orderId = searchParams.get("orderId");
 
-    useEffect(() => {
-        async function fetchOrderDetails() {
-            try {
-                const response = await fetch(`/api/orders?orderId=${orderId}`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch order details: ${response.statusText}`);
-                }
-                const orderData = await response.json();
-                if (orderData && orderData.length > 0) {
-                    const fetchedOrder = orderData[0];
-                    setOrder({
-                        orderId: fetchedOrder.orderId,
-                        customer: fetchedOrder.customer,
-                        email: fetchedOrder.email,
-                        phone: fetchedOrder.phone,
-                        dateOrdered: fetchedOrder.dateOrdered,
-                        dateReceived: fetchedOrder.dateReceived,
-                        notes: fetchedOrder.note || "",
-                        payment_status: fetchedOrder.paymentStatus || "Pending",
-                        shippingOption: fetchedOrder.shippingOption || "N/A",
-                        trackingNumber: fetchedOrder.trackingNumber || "",
-                        receipt_pic: fetchedOrder.receipt_pic || "",
-                        statusTimeline: fetchedOrder.statusTimeline || [],
-                        products: fetchedOrder.products.map((product: any) => ({
-                            albumName: product.albumName,
-                            size: product.size,
-                            paperType: product.paperType,
-                            printingFormat: product.printingFormat,
-                            quantity: product.quantity,
-                            price: product.price / product.quantity,
-                            folderPath: product.folderPath,
-                        })),
-                    });
-                    setSteps(fetchedOrder.statusTimeline || []);
-                } else {
-                    setOrder(null);
-                    setError("Order not found.");
-                }
-            } catch (error: any) {
-                setError(error.message);
-            } finally {
-                setLoading(false);
+    // แยก fetchOrderDetails ออกมาเป็นฟังก์ชันที่เรียกใช้ได้
+    const fetchOrderDetails = async () => {
+        try {
+            const response = await fetch(`/api/orders?orderId=${orderId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch order details: ${response.statusText}`);
             }
+            const orderData = await response.json();
+            if (orderData && orderData.length > 0) {
+                const fetchedOrder = orderData[0];
+                setOrder({
+                    orderId: fetchedOrder.orderId,
+                    customer: fetchedOrder.customer,
+                    email: fetchedOrder.email,
+                    phone: fetchedOrder.phone,
+                    dateOrdered: fetchedOrder.dateOrdered,
+                    dateReceived: fetchedOrder.dateReceived,
+                    notes: fetchedOrder.note || "",
+                    payment_status: fetchedOrder.paymentStatus || "N",
+                    shippingOption: fetchedOrder.shippingOption || "N/A",
+                    trackingNumber: fetchedOrder.trackingNumber || "",
+                    receipt_pic: fetchedOrder.receipt_pic || "",
+                    statusTimeline: fetchedOrder.statusTimeline || [],
+                    products: fetchedOrder.products.map((product: any) => ({
+                        albumName: product.albumName,
+                        size: product.size,
+                        paperType: product.paperType,
+                        printingFormat: product.printingFormat,
+                        quantity: product.quantity,
+                        price: product.price / product.quantity,
+                        folderPath: product.folderPath,
+                    })),
+                });
+                setSteps(fetchedOrder.statusTimeline || []);
+            } else {
+                setOrder(null);
+                setError("Order not found.");
+            }
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
         }
+    };
 
+    useEffect(() => {
         if (orderId) {
             fetchOrderDetails();
         } else {
@@ -102,32 +103,124 @@ export default function ManageOrderDetails() {
         }
     }, [orderId]);
 
-    const handleStatusUpdate = () => {
-        if (currentStatusIndex < steps.length - 1) {
-            const newSteps = steps.map((step, index) => {
-                if (index <= currentStatusIndex + 1) {
-                    return { ...step, completed: true };
-                }
-                return step;
+    const handleStatusUpdate = async () => {
+        if (!order) return;
+
+        try {
+            const response = await fetch(`/api/orders`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    status: steps[currentStatusIndex + 1]?.title,
+                    // เพิ่มข้อมูลอื่นๆ ที่มีอยู่เดิม
+                    shippingOption: order.shippingOption,
+                    note: order.notes,
+                    receivedDate: order.dateReceived,
+                    trackingNumber: order.trackingNumber,
+                    payment_status: order.payment_status,
+                    order_date: order.dateOrdered
+                }),
+                credentials: 'include',
             });
-            setSteps(newSteps);
-            setCurrentStatusIndex(currentStatusIndex + 1);
+
+            if (!response.ok) {
+                throw new Error(`Failed to update status: ${response.statusText}`);
+            }
+
+            if (currentStatusIndex < steps.length - 1) {
+                const newSteps = steps.map((step, index) => {
+                    if (index <= currentStatusIndex + 1) {
+                        return { ...step, completed: true };
+                    }
+                    return step;
+                });
+                setSteps(newSteps);
+                setCurrentStatusIndex(currentStatusIndex + 1);
+            }
+
+            // Refresh data
+            await fetchOrderDetails();
+        } catch (error) {
+            console.error('Error updating status:', error);
         }
     };
 
-    const handlePaymentUpdate = () => {
-        if (order) {
-            setOrder({ ...order, payment_status: "Approved" });
+    const handlePaymentUpdate = async () => {
+        if (!order) return;
+
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    payment_status: 'A',
+                    // ส่งข้อมูลอื่นๆ ที่มีอยู่เดิม
+                    shippingOption: order.shippingOption,
+                    note: order.notes,
+                    receivedDate: order.dateReceived,
+                    trackingNumber: order.trackingNumber,
+                    order_date: order.dateOrdered
+                }),
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update payment status: ${response.statusText}`);
+            }
+
+            // Update local state temporarily
+            setOrder({
+                ...order,
+                payment_status: 'A'
+            });
+
+            // Refresh data to ensure we have the latest state
+            await fetchOrderDetails();
+        } catch (error) {
+            console.error('Error updating payment status:', error);
         }
     };
 
-    const handleTrackingNumberUpdate = (trackingNumber: string) => {
-        if (order) {
-            setOrder({ ...order, trackingNumber });
+    const handleTrackingNumberUpdate = async (trackingNumber: string) => {
+        if (!order) return;
+
+        try {
+            const response = await fetch(`/api/orders`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    trackingNumber: trackingNumber,
+                    // ส่งข้อมูลอื่นๆ ที่มีอยู่เดิม
+                    shippingOption: order.shippingOption,
+                    note: order.notes,
+                    receivedDate: order.dateReceived,
+                    payment_status: order.payment_status,
+                    order_date: order.dateOrdered
+                }),
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update tracking number: ${response.statusText}`);
+            }
+
+            await fetchOrderDetails();
+        } catch (error) {
+            console.error('Error updating tracking number:', error);
         }
     };
 
     const formatDate = (dateString: string): string => {
+        if (!dateString) return "-";
         const date = new Date(dateString);
         return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
@@ -220,18 +313,30 @@ export default function ManageOrderDetails() {
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
                         )}
 
-                        <p className="mb-2">Payment status: {order.payment_status}</p>
+                        <p className="mb-2">
+                            Payment status: {
+                                order.payment_status === 'N' ? 'Not Approved' :
+                                order.payment_status === 'P' ? 'Payment Pending' :
+                                order.payment_status === 'A' ? 'Approved' : 'Unknown'
+                            }
+                        </p>
 
                         <div className="flex space-x-4 mb-4">
-                            {order.receipt_pic && (
-                                <Button variant="default" size="default">
+                            <Button 
+                                variant="default" 
+                                size="default" 
+                                disabled={!order.receipt_pic}
+                            >
+                                {order.receipt_pic ? (
                                     <a href={order.receipt_pic} target="_blank" rel="noopener noreferrer">
                                         View Receipt
                                     </a>
-                                </Button>
-                            )}
+                                ) : (
+                                    "No Receipt Available"
+                                )}
+                            </Button>
 
-                            {order.payment_status !== "Approved" && (
+                            {(order.payment_status === 'N' || order.payment_status === 'P') && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="default" size="default">
@@ -274,7 +379,7 @@ export default function ManageOrderDetails() {
                                                 printing_format={product.printingFormat}
                                                 product_qty={product.quantity}
                                                 price_per_unit={product.price}
-                                                folderPath={product.folderPath} // Pass folderPath here
+                                                folderPath={product.folderPath}
                                             />
                                         </div>
                                     ))}
