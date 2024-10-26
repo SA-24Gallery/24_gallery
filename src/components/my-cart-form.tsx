@@ -82,17 +82,20 @@ export default function MyCartForm() {
                 const paymentDeadline = new Date();
                 paymentDeadline.setDate(paymentDeadline.getDate() + 3);
     
+                // แปลง shippingOption เป็น 'D' หรือ 'P' ก่อนบันทึก
+                const shippingCode = shippingOption === "ThailandPost" ? "D" : "P";
+    
                 await fetch('/api/orders', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({
                         orderId: order.order_id,
-                        shippingOption,
+                        shippingOption: shippingCode,  // ใช้ shippingCode ที่แปลงแล้ว
                         note,
                         payment_status: 'N',
-                        order_date: new Date(),        // Set current date as order date
-                        payment_deadline: paymentDeadline  // Set payment deadline
+                        order_date: new Date(),
+                        payment_deadline: paymentDeadline
                     }),
                 });
     
@@ -101,7 +104,8 @@ export default function MyCartForm() {
                 console.error('Error updating order:', err);
             }
         }
-    };      
+    };
+    
 
     const handleRemoveProduct = async (index: number) => {
         if (!order) return;
@@ -161,18 +165,19 @@ export default function MyCartForm() {
                                 <div className="flex gap-4">
                                     <button
                                         className={`px-3 py-1 rounded-full ${shippingOption === "ThailandPost" ? "bg-gray-400" : "bg-gray-200"}`}
-                                        onClick={() => setShippingOption("ThailandPost")}
+                                        onClick={() => setShippingOption("ThailandPost")} // ค่าในนี้จะถูกแปลงเป็น 'D'
                                     >
                                         ThailandPost
                                     </button>
                                     <button
                                         className={`px-3 py-1 rounded-full ${shippingOption === "PickUp" ? "bg-gray-400" : "bg-gray-200"}`}
-                                        onClick={() => setShippingOption("PickUp")}
+                                        onClick={() => setShippingOption("PickUp")} // ค่าในนี้จะถูกแปลงเป็น 'P'
                                     >
                                         Pick up
                                     </button>
                                 </div>
                             </div>
+
                             <div className="mb-4">
                                 <h3 className="font-bold">Date ordered</h3>
                                 <p>{order.order_date ? formatDate(order.order_date) : "N/A"}</p>
