@@ -164,6 +164,7 @@ export async function GET(request: Request) {
           p.Price AS totalPrice,
           o.Email AS email,
           o.Shipping_option AS shippingOption,
+          o.Payment_status AS paymentStatus,
           DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,
           DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,
           s.Status_name AS status
@@ -197,6 +198,7 @@ export async function GET(request: Request) {
           p.Price AS totalPrice,
           o.Email AS email,
           o.Shipping_option AS shippingOption,
+          o.Payment_status AS paymentStatus,
           DATE_FORMAT(o.Order_date, '%M %d, %Y') AS dateOrdered,
           DATE_FORMAT(o.Received_date, '%M %d, %Y') AS dateReceived,
           s.Status_name AS status
@@ -239,6 +241,7 @@ export async function GET(request: Request) {
       shippingOption: order.shippingOption,
       dateOrdered: order.dateOrdered,
       dateReceived: order.dateReceived,
+      paymentStatus: order.paymentStatus,
       products: orders.filter(o => o.orderId === order.orderId).map(product => ({
         albumName: product.albumName,
         fileUrls: Array.isArray(product.fileUrls) ? product.fileUrls : [product.fileUrls],

@@ -9,6 +9,7 @@ interface Order {
   shippingOption: string; 
   dateOrdered: string;
   dateReceived: string;
+  paymentStatus: string; 
   status: string; 
   statusDate: string; 
 }
@@ -19,18 +20,18 @@ export function MyOrdersList() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'orderId' | 'dateOrdered' | 'dateReceived'>('orderId');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default ascending sort
-  const router = useRouter(); // Using Next.js router for navigation
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const router = useRouter(); 
 
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders'); 
+        const response = await fetch('/api/orders');
         if (!response.ok) {
           throw new Error(`Failed to fetch orders: ${response.statusText}`);
         }
         const data: Order[] = await response.json();
-        const latestOrders = getLatestOrders(data);
+        const latestOrders = deduplicateOrders(data); // Deduplicate orders
         setOrders(latestOrders);
       } catch (error: any) {
         console.error('Error fetching orders:', error);
@@ -43,16 +44,18 @@ export function MyOrdersList() {
     fetchOrders();
   }, []);
 
-  const getLatestOrders = (orders: Order[]) => {
-    const orderMap: { [key: string]: Order } = {};
+  // Deduplication logic to get the latest status for each order
+  const deduplicateOrders = (orders: Order[]): Order[] => {
+    const orderMap: { [orderId: string]: Order } = {};
 
     orders.forEach(order => {
+      // If the order ID doesn't exist in the map or if the current statusDate is more recent, update the map
       if (!orderMap[order.orderId] || new Date(order.statusDate) > new Date(orderMap[order.orderId].statusDate)) {
         orderMap[order.orderId] = order;
       }
     });
 
-    return Object.values(orderMap);
+    return Object.values(orderMap); // Return only unique orders
   };
 
   const handleSort = (field: 'orderId' | 'dateOrdered' | 'dateReceived') => {
@@ -78,19 +81,23 @@ export function MyOrdersList() {
     return sortOrder === 'asc' ? comparison : -comparison;
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-      return new Date(dateString).toLocaleDateString(undefined, options);
-    } catch (error) {
-      console.error("Error formatting date:", dateString, error);
-      return dateString;
-    }
+  const handleRowClick = (orderId: string) => {
+    router.push(`/my-order-details?orderId=${orderId}`);
   };
 
-  const handleRowClick = (orderId: string) => {
-    // Navigate to the order details page when the row is clicked
-    router.push(`/my-order-details?orderId=${orderId}`);
+  const getShippingOptionDisplay = (option: string) => {
+    if (option === 'D') return 'Delivery';
+    if (option === 'P') return 'Pick Up';
+    return 'Unknown';
+  };
+
+  const getStatusDisplay = (order: Order) => {
+    if (order.paymentStatus === 'N') {
+      return 'Payment Not Approved';
+    } else if (order.paymentStatus === 'A') {
+      return order.status;
+    }
+    return 'Unknown Status';
   };
 
   if (loading) {
@@ -102,14 +109,11 @@ export function MyOrdersList() {
   }
 
   const filteredOrders = orders
-    .filter(order =>
-      order.orderId.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(order => order.orderId.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort(sortOrders);
 
   return (
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
-      {/* Search Box */}
       <div className="mb-6">
         <input
           type="text"
@@ -120,7 +124,6 @@ export function MyOrdersList() {
         />
       </div>
 
-      {/* Orders Table */}
       <div className="overflow-auto rounded-lg shadow-sm">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-100">
@@ -134,8 +137,8 @@ export function MyOrdersList() {
               <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
                 Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
               </th>
-              <th className="px-6 py-3 text-left">Delivery Option</th> {/* Delivery Column */}
-              <th className="px-6 py-3 text-left">Status</th> {/* Status Column */}
+              <th className="px-6 py-3 text-left">Delivery Option</th>
+              <th className="px-6 py-3 text-left">Status</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -143,13 +146,13 @@ export function MyOrdersList() {
               <tr
                 key={index}
                 className="hover:bg-gray-100 cursor-pointer"
-                onClick={() => handleRowClick(order.orderId)} // Attach click event to entire row
+                onClick={() => handleRowClick(order.orderId)}
               >
                 <td className="px-6 py-4">{order.orderId}</td>
-                <td className="px-6 py-4">{formatDate(order.dateOrdered)}</td>
-                <td className="px-6 py-4">{formatDate(order.dateReceived)}</td>
-                <td className="px-6 py-4">{order.shippingOption}</td> {/* Display delivery option */}
-                <td className="px-6 py-4">{order.status}</td> {/* Display status */}
+                <td className="px-6 py-4">{new Date(order.dateOrdered).toLocaleDateString()}</td>
+                <td className="px-6 py-4">{new Date(order.dateReceived).toLocaleDateString()}</td>
+                <td className="px-6 py-4">{getShippingOptionDisplay(order.shippingOption)}</td>
+                <td className="px-6 py-4">{getStatusDisplay(order)}</td>
               </tr>
             ))}
           </tbody>

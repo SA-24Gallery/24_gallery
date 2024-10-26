@@ -38,6 +38,13 @@ export default function MyOrderDetailsPage() {
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   };
 
+  // Function to map shipping option from 'D' or 'P' to their full names
+  const getShippingOptionDisplay = (option: string) => {
+    if (option === 'D') return 'Delivery';
+    if (option === 'P') return 'Pick Up';
+    return 'Unknown'; // Fallback in case of an unexpected value
+  };
+
   if (loading) {
     return <div>Loading order details...</div>;
   }
@@ -50,10 +57,9 @@ export default function MyOrderDetailsPage() {
     return <div>No order found.</div>;
   }
 
-  const shippingCost = order.shippingOption === "delivery" ? 50 : 0;
+  const shippingCost = order.shippingOption === "D" ? 50 : 0; // Assuming 'D' means delivery
 
   const totalPrice = order.products.reduce((total: number, product: any) => total + (product.price * product.quantity), 0) + shippingCost;
-
 
   const steps = order.statusTimeline || [];
 
@@ -96,9 +102,19 @@ export default function MyOrderDetailsPage() {
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
             <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-            <p>Shipping option: {order.shippingOption}</p>
+              {/* Payment Status Section */}
+              <div>
+                  {order.paymentStatus === 'N' && (
+                       <p className="text-red-500 font-bold">Payment Not Approved</p>
+                     )}
+                     {order.paymentStatus === 'A' && (
+                        <p className="text-green-500 font-bold">Payment Approved</p>
+                     )}
+              </div>
+              
+            <p>Shipping option: {getShippingOptionDisplay(order.shippingOption)}</p>
 
-            {order.shippingOption !== "PickUp" && (
+            {order.shippingOption === "D" && (
               <p>Tracking Number: #{order.trackingNumber}</p>
             )}
 
