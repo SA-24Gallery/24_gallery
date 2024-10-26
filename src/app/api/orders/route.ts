@@ -72,6 +72,7 @@ interface Order {
   dateReceived: Date | null;
   paymentStatus: string | null;
   note: string | null;
+  trackingNumber: string | null;
   products: Product[];
   status: string | null;
 }
@@ -265,6 +266,7 @@ export async function GET(request: Request) {
           o.Note AS note,
           o.Order_date AS dateOrdered,
           o.Received_date AS dateReceived,
+          o.Tracking_number AS trackingNumber,
           s.Status_name AS status
         FROM Orders o
         LEFT JOIN Users u ON o.Email = u.Email
@@ -301,6 +303,7 @@ export async function GET(request: Request) {
           o.Note AS note,
           o.Order_date AS dateOrdered,
           o.Received_date AS dateReceived,
+          o.Tracking_number AS trackingNumber,
           s.Status_name AS status
         FROM Orders o
         LEFT JOIN Users u ON o.Email = u.Email
@@ -361,6 +364,7 @@ export async function GET(request: Request) {
           dateReceived: order.dateReceived,
           paymentStatus: order.paymentStatus,
           note: order.note,
+          trackingNumber: order.trackingNumber,
           products: [],
           status: order.status,
         };
@@ -420,15 +424,16 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { orderId, status, receivedDate } = body;
+    const { orderId, status, receivedDate, trackingNumber } = body;  // เพิ่ม trackingNumber
 
-    // Update order status
+    // Update order status and tracking number
     const updateOrderSql = `
       UPDATE Orders 
-      SET Received_date = ?
+      SET Received_date = ?,
+          Tracking_number = ?
       WHERE Order_id = ?
     `;
-    await query<ResultSetHeader>(updateOrderSql, [receivedDate, orderId]);
+    await query<ResultSetHeader>(updateOrderSql, [receivedDate, trackingNumber, orderId]);
 
     // Insert new status
     const insertStatusSql = `
