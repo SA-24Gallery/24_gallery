@@ -482,6 +482,7 @@ export async function PUT(request: Request) {
       shippingOption = null,
       note = null,
       payment_status = null,
+      payment_deadline = null,
       order_date = null,
     } = body;
 
@@ -494,6 +495,7 @@ export async function PUT(request: Request) {
       shippingOption,
       note,
       payment_status,
+      payment_deadline,
       order_date,
     });
 
@@ -520,7 +522,8 @@ export async function PUT(request: Request) {
           Shipping_option = ?,
           Note = ?,
           Payment_status = ?,
-          Order_date = ?
+          Order_date = ?,
+          Payment_deadline = ?
       WHERE Order_id = ?
     `;
     await query<ResultSetHeader>(updateOrderSql, [
@@ -530,6 +533,7 @@ export async function PUT(request: Request) {
       note,
       payment_status,
       order_date,
+      payment_deadline,
       orderId,
     ]);
 

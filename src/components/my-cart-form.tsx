@@ -78,6 +78,10 @@ export default function MyCartForm() {
     const handlePayment = async () => {
         if (order && order.products.length > 0) {
             try {
+                // Calculate payment deadline (3 days from now)
+                const paymentDeadline = new Date();
+                paymentDeadline.setDate(paymentDeadline.getDate() + 3);
+    
                 await fetch('/api/orders', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -86,8 +90,9 @@ export default function MyCartForm() {
                         orderId: order.order_id,
                         shippingOption,
                         note,
-                        payment_status: 'P',     
-                        order_date: new Date(),
+                        payment_status: 'P',
+                        order_date: new Date(),        // Set current date as order date
+                        payment_deadline: paymentDeadline  // Set payment deadline
                     }),
                 });
     
@@ -96,8 +101,7 @@ export default function MyCartForm() {
                 console.error('Error updating order:', err);
             }
         }
-    };    
-    
+    };      
 
     const handleRemoveProduct = async (index: number) => {
         if (!order) return;
