@@ -21,7 +21,7 @@ export default function MyCartForm() {
     } | null>(null);
 
     const [loading, setLoading] = useState(true);
-    const [shippingOption, setShippingOption] = useState(""); 
+    const [shippingOption, setShippingOption] = useState("");
     const shippingCost = shippingOption === "ThailandPost" ? 50 : 0;
 
     // Fetch order data from the API when the component mounts
@@ -48,10 +48,10 @@ export default function MyCartForm() {
                         order_id: data[0].orderId,
                         customer_name: data[0].customer,
                         email: data[0].email,
-                        phone: "088-8888888",
+                        phone: data[0].phone,
                         order_date: data[0].dateOrdered || "",
                         received_date: data[0].dateReceived || "",
-                        payment_status: data[0].status,
+                        payment_status: data[0].payment_status || 'N',
                         products: data.map((product: any) => ({
                             album_name: product.albumName,
                             size: product.size,
@@ -92,9 +92,9 @@ export default function MyCartForm() {
         });
     };
 
-    const totalPrice = order?.products.reduce((total, product) => {
+    const totalPrice = (order?.products.reduce((total, product) => {
         return total + (product.price_per_unit * product.product_qty);
-    }, 0) + shippingCost;
+    }, 0) || 0) + shippingCost;
 
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
@@ -122,14 +122,14 @@ export default function MyCartForm() {
                             <div className="mb-4">
                                 <h3 className="font-bold">Shipping options</h3>
                                 <div className="flex gap-4">
-                                    <button 
-                                        className={`px-3 py-1 rounded-full ${shippingOption === "ThailandPost" ? "bg-gray-400" : "bg-gray-200"}`} 
+                                    <button
+                                        className={`px-3 py-1 rounded-full ${shippingOption === "ThailandPost" ? "bg-gray-400" : "bg-gray-200"}`}
                                         onClick={() => setShippingOption("ThailandPost")}
                                     >
                                         ThailandPost
                                     </button>
-                                    <button 
-                                        className={`px-3 py-1 rounded-full ${shippingOption === "PickUp" ? "bg-gray-400" : "bg-gray-200"}`} 
+                                    <button
+                                        className={`px-3 py-1 rounded-full ${shippingOption === "PickUp" ? "bg-gray-400" : "bg-gray-200"}`}
                                         onClick={() => setShippingOption("PickUp")}
                                     >
                                         Pick up
@@ -160,7 +160,10 @@ export default function MyCartForm() {
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
                         {order ? (
                             <>
-                                <p className="mb-2">Payment status: {order.payment_status}</p>
+                                {/* Payment Status Display */}
+                                <p className="mb-2">
+                                    Payment status: {order.payment_status === 'N' ? 'Not Approved' : 'Paid'}
+                                </p>
                                 <h3 className="font-bold mb-4">Details</h3>
 
                                 {order.products.length > 0 ? (
@@ -198,12 +201,12 @@ export default function MyCartForm() {
 
                     <div className="flex justify-between items-center mt-4">
                         <p className="text-[20px] font-bold">Total price: {totalPrice || 0} Baht</p>
-                        <Button 
-                            variant="default" 
-                            size="default" 
-                            disabled={!order || order.products.length === 0} 
+                        <Button
+                            variant="default"
+                            size="default"
+                            disabled={!order || order.products.length === 0}
                             onClick={handlePayment}
-                            className="text-[20px] px-10 py-6 font-bold" 
+                            className="text-[20px] px-10 py-6 font-bold"
                         >
                             Pay
                         </Button>
