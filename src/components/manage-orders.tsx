@@ -78,7 +78,7 @@ export function ManageOrders() {
   const sortedOrders = [...filteredOrders].sort(sortOrders);
 
   const handleRowClick = (orderId: string) => {
-    router.push(`/orders/${orderId}`);
+    router.push(`/manage-order-details?orderId=${orderId}`);
   };
 
   const getShippingOptionDisplay = (option: string) => {
