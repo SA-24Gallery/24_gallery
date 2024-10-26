@@ -99,7 +99,7 @@ export default function MyCartForm() {
                     }),
                 });
     
-                router.push(`/payment?orderId=${order.order_id}`);
+                router.push(`/payment?orderId=${order.order_id}&totalPrice=${totalPrice}`);
             } catch (err) {
                 console.error('Error updating order:', err);
             }

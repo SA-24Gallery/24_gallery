@@ -188,7 +188,7 @@ export default function MyOrderDetailsPage() {
                         variant="default"
                         size="default"
                         className="text-[20px] px-10 py-6 font-bold"
-                        onClick={() => (router.push(`/payment?orderId=${order.orderId}`))}
+                        onClick={() => (router.push(`/payment?orderId=${order.orderId}&totalPrice=${totalPrice}`))}
                     >
                       Pay
                     </Button>
