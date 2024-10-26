@@ -46,26 +46,27 @@ export default function MyCartForm() {
                 if (data && data.length > 0) {
                     const orderData = data[0]; // Assuming you want to display the first unpaid order
                     setOrder({
-                        order_id: orderData.orderId,
-                        customer_name: orderData.customer,
-                        email: orderData.email,
-                        phone: orderData.phone,
-                        order_date: orderData.dateOrdered || "",
-                        received_date: orderData.dateReceived || "",
-                        payment_status: orderData.paymentStatus || 'N',
-                        products: orderData.products.map((product: any) => ({
-                            album_name: product.albumName,
-                            size: product.size,
-                            paper_type: product.paperType,
-                            printing_format: product.printingFormat,
-                            product_qty: product.quantity,
-                            price_per_unit: product.price / product.quantity,
-                            url: product.fileUrls,
-                        })),
+                      order_id: orderData.orderId,
+                      customer_name: orderData.customer,
+                      email: orderData.email,
+                      phone: orderData.phone,
+                      order_date: orderData.dateOrdered || "",
+                      received_date: orderData.dateReceived || "",
+                      payment_status: orderData.paymentStatus || 'N',
+                      products: orderData.products.map((product: any) => ({
+                        product_id: product.productId, // Include product_id
+                        album_name: product.albumName,
+                        size: product.size,
+                        paper_type: product.paperType,
+                        printing_format: product.printingFormat,
+                        product_qty: product.quantity,
+                        price_per_unit: product.price / product.quantity,
+                        url: product.fileUrls,
+                      })),
                     });
-                } else {
+                  } else {
                     setOrder(null);
-                }
+                  }
             } catch (err) {
                 console.error('Error fetching order data:', err);
                 setOrder(null);
@@ -85,34 +86,36 @@ export default function MyCartForm() {
 
     const handleRemoveProduct = async (index: number) => {
         if (!order) return;
-
+      
+        const productToRemove = order.products[index];
         const updatedProducts = order.products.filter((_, i) => i !== index);
-
-        if (updatedProducts.length === 0) {
-            // If all products are removed, delete the order
-            try {
-                const response = await fetch(`/api/orders?orderId=${order.order_id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    console.error('Failed to delete order');
-                } else {
-                    setOrder(null);
-                }
-            } catch (err) {
-                console.error('Error deleting order:', err);
+      
+        try {
+          // Send DELETE request to remove the product
+          const response = await fetch(`/api/orders?orderId=${order.order_id}&productId=${productToRemove.product_id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          });
+      
+          if (!response.ok) {
+            console.error('Failed to remove product');
+          } else {
+            // Update the local state
+            if (updatedProducts.length === 0) {
+              // If no products left, set order to null
+              setOrder(null);
+            } else {
+              setOrder({ ...order, products: updatedProducts });
             }
-        } else {
-            // Otherwise, update the order with the remaining products
-            setOrder({ ...order, products: updatedProducts });
-            // You may need to make an API call to update the order in the backend
+          }
+        } catch (err) {
+          console.error('Error removing product:', err);
         }
-    };
+      };
+      
 
     const totalPrice = (order?.products.reduce((total, product) => {
         return total + (product.price_per_unit * product.product_qty);

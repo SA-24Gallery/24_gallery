@@ -1,26 +1,35 @@
-// orders/route.ts
+// src/app/api/orders/route.ts
 
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { createNewOrder } from "@/app/api/create-new-order/route";
 import AWS from 'aws-sdk';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 // Configure AWS SDK
 AWS.config.update({
-  region: process.env.AWS_REGION, // e.g., 'us-east-1'
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID!, // Your AWS Access Key ID
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!, // Your AWS Secret Access Key
+  region: process.env.AWS_REGION!,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
 });
 
 const s3 = new AWS.S3();
 
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION!,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
 // Function to generate a pre-signed URL
 function getPreSignedUrl(key: string): string {
   const params = {
-    Bucket: process.env.AWS_BUCKET_NAME!, // Your S3 bucket name
+    Bucket: process.env.AWS_BUCKET_NAME!,
     Key: key,
     Expires: 60 * 60, // URL expires in 1 hour
   };
@@ -28,16 +37,44 @@ function getPreSignedUrl(key: string): string {
   return s3.getSignedUrl('getObject', params);
 }
 
-// Define the OrderBody type for creating an order
-type OrderBody = {
+// Function to list objects in a folder
+async function listObjectsInFolder(folderPath: string): Promise<string[]> {
+  const command = new ListObjectsV2Command({
+    Bucket: process.env.AWS_BUCKET_NAME!,
+    Prefix: folderPath,
+  });
+
+  const response = await s3Client.send(command);
+
+  const keys = response.Contents?.map((item) => item.Key!) || [];
+  return keys;
+}
+
+// Define interfaces
+interface Product {
+  productId: string;
   albumName: string;
   fileUrls: string[];
   size: string;
   paperType: string;
   printingFormat: string;
   quantity: number;
-  totalPrice: number;
-};
+  price: number;
+}
+
+interface Order {
+  orderId: string;
+  customer: string;
+  phone: string;
+  email: string;
+  shippingOption: string | null;
+  dateOrdered: Date | null;
+  dateReceived: Date | null;
+  paymentStatus: string | null;
+  note: string | null;
+  products: Product[];
+  status: string | null;
+}
 
 // POST request handler: Create or update an order
 export async function POST(request: Request) {
@@ -47,10 +84,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json() as OrderBody;
+    const body = await request.json();
     const {
       albumName,
-      fileUrls,
       size,
       paperType,
       printingFormat,
@@ -63,15 +99,16 @@ export async function POST(request: Request) {
       const prefix = 'prd';
       const numberLength = 5;
 
-      const result = await query<RowDataPacket[]>(
-        `SELECT product_id FROM Product
-         ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+      const rows = await query<RowDataPacket[]>(
+        `SELECT Product_id FROM Product
+         WHERE Product_id LIKE '${prefix}%'
+         ORDER BY CAST(SUBSTRING(Product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
       );
 
       let nextProductId = '';
 
-      if (result.length > 0) {
-        const lastProductId = result[0].product_id;
+      if (rows.length > 0) {
+        const lastProductId = rows[0].Product_id;
         const numberPart = lastProductId.substring(prefix.length);
         const nextNumber = parseInt(numberPart, 10) + 1;
         const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
@@ -83,43 +120,77 @@ export async function POST(request: Request) {
       return nextProductId;
     };
 
+    // Function to get the next order ID
+    const getNextOrderId = async (): Promise<string> => {
+      const prefix = 'ord';
+      const numberLength = 5;
+
+      const rows = await query<RowDataPacket[]>(
+        `SELECT Order_id FROM Orders
+         WHERE Order_id LIKE '${prefix}%'
+         ORDER BY CAST(SUBSTRING(Order_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+      );
+
+      let nextOrderId = '';
+
+      if (rows.length > 0) {
+        const lastOrderId = rows[0].Order_id;
+        const numberPart = lastOrderId.substring(prefix.length);
+        const nextNumber = parseInt(numberPart, 10) + 1;
+        const nextNumberPadded = nextNumber.toString().padStart(numberLength, '0');
+        nextOrderId = prefix + nextNumberPadded;
+      } else {
+        nextOrderId = prefix + '00001';
+      }
+
+      return nextOrderId;
+    };
+
     const email = session.user.email;
 
     if (!email) {
       return NextResponse.json({ message: 'User email not found' }, { status: 400 });
     }
 
-    // Check for existing order with payment_status 'N' (Not paid) or order_date IS NULL
-    const existingOrder = await query<RowDataPacket[]>(
-      `SELECT Order_id FROM orders WHERE email = ? AND order_date IS NULL`,
+    // Check for existing order with order_date IS NULL (not yet finalized)
+    const existingOrderRows = await query<RowDataPacket[]>(
+      `SELECT Order_id FROM Orders WHERE email = ? AND order_date IS NULL`,
       [email]
     );
 
-    let orderId;
+    let orderId: string;
 
-    if (existingOrder.length > 0) {
+    if (existingOrderRows.length > 0) {
       // Use existing Order_id
-      orderId = existingOrder[0].Order_id;
+      orderId = existingOrderRows[0].Order_id;
     } else {
-      // Create new order using the separated functionality
-      orderId = await createNewOrder(email);
+      // Create new order with generated Order_id
+      orderId = await getNextOrderId();
+      const insertOrderSql = `
+        INSERT INTO Orders (Order_id, Email)
+        VALUES (?, ?)
+      `;
+      await query<ResultSetHeader>(insertOrderSql, [orderId, email]);
     }
 
     // Get the next product ID
     const productId = await getNextProductId();
 
+    // Set the folder path using productId
+    const url = `products/${productId}/`;
+
     // Insert product details associated with the order
     const insertProductSql = `
       INSERT INTO Product (
-        product_id,
-        album_name,
-        url,
-        size,
-        paper_type,
-        printing_format,
+        Product_id,
+        Size,
+        Paper_type,
         Product_qty,
-        price,
-        order_id
+        Printing_format,
+        Price,
+        Album_name,
+        Url,
+        Order_id
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -127,13 +198,13 @@ export async function POST(request: Request) {
       insertProductSql,
       [
         productId,
-        albumName,
-        JSON.stringify(fileUrls), // Store the object keys as JSON
         size,
         paperType,
-        printingFormat,
         quantity,
+        printingFormat,
         totalPrice,
+        albumName,
+        url, // Use the folder path with productId
         orderId,
       ]
     );
@@ -142,15 +213,15 @@ export async function POST(request: Request) {
       {
         success: true,
         orderId: orderId,
+        productId: productId,
         message: 'Order updated successfully',
       },
       { status: 200 }
     );
-
   } catch (error: any) {
     console.error('Error creating or updating order:', error);
     return NextResponse.json(
-      { error: "Error creating or updating order", message: error.message },
+      { error: 'Error creating or updating order', message: error.message },
       { status: 500 }
     );
   }
@@ -180,8 +251,9 @@ export async function GET(request: Request) {
           o.Order_id AS orderId,
           u.User_name AS customer,
           u.Phone_number AS phone,
+          p.Product_id AS productId,
           p.Album_name AS albumName,
-          p.Url AS fileUrls,
+          p.Url AS folderPath,
           p.Size AS size,
           p.Paper_type AS paperType,
           p.Printing_format AS printingFormat,
@@ -215,8 +287,9 @@ export async function GET(request: Request) {
           o.Order_id AS orderId,
           u.User_name AS customer,
           u.Phone_number AS phone,
+          p.Product_id AS productId,
           p.Album_name AS albumName,
-          p.Url AS fileUrls,
+          p.Url AS folderPath,
           p.Size AS size,
           p.Paper_type AS paperType,
           p.Printing_format AS printingFormat,
@@ -268,15 +341,17 @@ export async function GET(request: Request) {
 
     sql += ` ORDER BY o.Order_date DESC`;
 
-    const orders = await query<RowDataPacket[]>(sql, queryParams);
+    const rows = await query<RowDataPacket[]>(sql, queryParams);
 
     // Transform and group orders and their products
-    const orderMap = new Map<string, any>();
+    const transformedOrders: Order[] = [];
 
-    orders.forEach(order => {
-      if (!orderMap.has(order.orderId)) {
-        // Initialize the order in the map
-        orderMap.set(order.orderId, {
+    for (const order of rows) {
+      // Find or create the current order in transformedOrders
+      let currentOrder = transformedOrders.find((o) => o.orderId === order.orderId);
+
+      if (!currentOrder) {
+        currentOrder = {
           orderId: order.orderId,
           customer: order.customer,
           phone: order.phone,
@@ -288,68 +363,52 @@ export async function GET(request: Request) {
           note: order.note,
           products: [],
           status: order.status,
-        });
+        };
+        transformedOrders.push(currentOrder);
       }
 
-      // Add the product to the products array
-      const currentOrder = orderMap.get(order.orderId);
+      // List files in the S3 folder and generate pre-signed URLs
+      let fileUrls: string[] = [];
+      const folderPath = order.folderPath; // Url contains folder path
 
-      // Safely parse fileUrls
-      let fileUrls: string[];
-      if (order.fileUrls) {
+      if (folderPath) {
         try {
-          // Try parsing as JSON
-          fileUrls = JSON.parse(order.fileUrls);
-          if (!Array.isArray(fileUrls)) {
-            // If it's not an array, wrap it in an array
-            fileUrls = [fileUrls];
-          }
+          const fileKeys = await listObjectsInFolder(folderPath);
+          fileUrls = fileKeys.map((key: string) => {
+            console.log('Generating pre-signed URL for key:', key);
+            return getPreSignedUrl(key);
+          });
         } catch (e) {
-          // If parsing fails, assume it's a plain string
-          fileUrls = [order.fileUrls];
+          console.error('Error listing objects:', e);
         }
-      } else {
-        fileUrls = [];
       }
 
-      // Generate pre-signed URLs
-      const preSignedUrls = fileUrls.map((key: string) => getPreSignedUrl(key));
-
-      currentOrder.products.push({
+      const product: Product = {
+        productId: order.productId,
         albumName: order.albumName,
-        fileUrls: preSignedUrls, // Use pre-signed URLs
+        fileUrls: fileUrls, // Use generated URLs
         size: order.size,
         paperType: order.paperType,
         printingFormat: order.printingFormat,
         quantity: order.productQty,
         price: order.totalPrice,
-      });
-    });
+      };
 
-    const transformedOrders = Array.from(orderMap.values());
+      currentOrder.products.push(product);
+    }
 
     if (!transformedOrders.length) {
-      return NextResponse.json(
-        { message: 'No orders found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: 'No orders found' }, { status: 404 });
     }
 
     return NextResponse.json(transformedOrders, { status: 200 });
-
   } catch (error: any) {
     console.error('Error fetching orders:', error);
     return NextResponse.json(
-      { error: "Error fetching orders", message: error.message },
+      { error: 'Error fetching orders', message: error.message },
       { status: 500 }
     );
   }
-}
-
-// Helper function to format date
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
 
 // Handler for PUT requests to update order status
@@ -365,7 +424,7 @@ export async function PUT(request: Request) {
 
     // Update order status
     const updateOrderSql = `
-      UPDATE orders 
+      UPDATE Orders 
       SET Received_date = ?
       WHERE Order_id = ?
     `;
@@ -373,7 +432,7 @@ export async function PUT(request: Request) {
 
     // Insert new status
     const insertStatusSql = `
-      INSERT INTO STATUS (Order_id, Status_name, Status_date)
+      INSERT INTO Status (Order_id, Status_name, Status_date)
       VALUES (?, ?, NOW())
     `;
     await query<ResultSetHeader>(insertStatusSql, [orderId, status]);
@@ -382,11 +441,10 @@ export async function PUT(request: Request) {
       { success: true, message: 'Order updated successfully' },
       { status: 200 }
     );
-
   } catch (error: any) {
     console.error('Error updating order:', error);
     return NextResponse.json(
-      { error: "Error updating order", message: error.message },
+      { error: 'Error updating order', message: error.message },
       { status: 500 }
     );
   }
@@ -402,44 +460,65 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
+    const productId = searchParams.get('productId'); // Get productId from query params
 
     if (!orderId) {
-      return NextResponse.json(
-        { error: "Order ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
-    // Verify user has permission to cancel this order
+    // Verify user has permission to modify this order
     if (session.user.role !== 'A') {
-      const orderSql = `SELECT email FROM orders WHERE Order_id = ?`;
-      const [orderResult] = await query<RowDataPacket[]>(orderSql, [orderId]);
+      const orderRows = await query<RowDataPacket[]>(
+        `SELECT email FROM Orders WHERE Order_id = ?`,
+        [orderId]
+      );
 
-      if (!orderResult || orderResult.email !== session.user.email) {
+      if (!orderRows.length || orderRows[0].email !== session.user.email) {
         return NextResponse.json(
-          { error: "Unauthorized to cancel this order" },
+          { error: 'Unauthorized to modify this order' },
           { status: 403 }
         );
       }
     }
 
-    // Delete products associated with the order
-    const deleteProductsSql = `DELETE FROM Product WHERE Order_id = ?`;
-    await query<ResultSetHeader>(deleteProductsSql, [orderId]);
+    if (productId) {
+      // Delete a specific product from the order
+      const deleteProductSql = `DELETE FROM Product WHERE Product_id = ? AND Order_id = ?`;
+      await query<ResultSetHeader>(deleteProductSql, [productId, orderId]);
 
-    // Delete the order
-    const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
-    await query<ResultSetHeader>(deleteOrderSql, [orderId]);
+      // Check if there are any products left in the order
+      const productRows = await query<RowDataPacket[]>(
+        `SELECT COUNT(*) as productCount FROM Product WHERE Order_id = ?`,
+        [orderId]
+      );
 
-    return NextResponse.json(
-      { success: true, message: 'Order cancelled successfully' },
-      { status: 200 }
-    );
+      if (productRows[0].productCount === 0) {
+        // If no products left, delete the order
+        const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
+        await query<ResultSetHeader>(deleteOrderSql, [orderId]);
+      }
 
+      return NextResponse.json(
+        { success: true, message: 'Product removed from order successfully' },
+        { status: 200 }
+      );
+    } else {
+      // Delete the entire order and associated products
+      const deleteProductsSql = `DELETE FROM Product WHERE Order_id = ?`;
+      await query<ResultSetHeader>(deleteProductsSql, [orderId]);
+
+      const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
+      await query<ResultSetHeader>(deleteOrderSql, [orderId]);
+
+      return NextResponse.json(
+        { success: true, message: 'Order cancelled successfully' },
+        { status: 200 }
+      );
+    }
   } catch (error: any) {
     console.error('Error cancelling order:', error);
     return NextResponse.json(
-      { error: "Error cancelling order", message: error.message },
+      { error: 'Error cancelling order', message: error.message },
       { status: 500 }
     );
   }
