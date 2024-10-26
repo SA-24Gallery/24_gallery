@@ -149,8 +149,12 @@ export function MyOrdersList() {
                 onClick={() => handleRowClick(order.orderId)}
               >
                 <td className="px-6 py-4">{order.orderId}</td>
-                <td className="px-6 py-4">{new Date(order.dateOrdered).toLocaleDateString()}</td>
-                <td className="px-6 py-4">{new Date(order.dateReceived).toLocaleDateString()}</td>
+                <td className="px-6 py-4">
+                  {order.paymentStatus === 'A' ? new Date(order.dateOrdered).toLocaleDateString() : '-'}
+                </td>
+                <td className="px-6 py-4">
+                  {order.paymentStatus === 'A' ? new Date(order.dateReceived).toLocaleDateString() : '-'}
+                </td>
                 <td className="px-6 py-4">{getShippingOptionDisplay(order.shippingOption)}</td>
                 <td className="px-6 py-4">{getStatusDisplay(order)}</td>
               </tr>

@@ -78,35 +78,41 @@ export default function MyOrderDetailsPage() {
         {/* Left Section */}
         <div className="flex-1 bg-white p-6 rounded-lg space-y-6">
           <h2 className="text-2xl font-bold mb-4">Order ID #{order.orderId}</h2>
+    
           <div>
             <h3 className="font-bold mb-1">Customer</h3>
             <p>Name: {order.customer}</p> {/* Display customer name */}
-            <p>Email: {order.email}</p>
+           <p>Email: {order.email}</p>
             <p>Phone: {order.phone}</p> {/* Display phone */}
           </div>
+  
+          {/* Conditional Rendering for Date Ordered */}
+          {order.paymentStatus === 'A' && (
+            <div>
+              <h3 className="font-bold mb-1">Date ordered</h3>
+             <p>{formatDate(order.dateOrdered)}</p>
+            </div>
+          )}
+  
+         {/* Conditional Rendering for Date Received */}
+         {order.paymentStatus === 'A' && order.dateReceived && (
+            <div>
+             <h3 className="font-bold mb-1">Date received</h3>
+             <p>{formatDate(order.dateReceived)}</p>
+           </div>
+         )}
+
           <div>
-            <h3 className="font-bold mb-1">Date ordered</h3>
-            <p>{formatDate(order.dateOrdered)}</p>
-          </div>
-          <div>
-            <h3 className="font-bold mb-1">Date received</h3>
-            <p>{formatDate(order.dateReceived)}</p>
-          </div>
-          <div>
-            <h3 className="font-bold mb-1">Optional Notes or Address</h3>
-            <textarea
+           <h3 className="font-bold mb-1">Optional Notes or Address</h3>
+           <textarea
               value={order.note || "No additional notes provided."}
-              className="w-full p-2 border border-gray-300 rounded-md bg-gray-50"
-              rows={3}
-              readOnly
-            />
-          </div>
-          {/* Uncomment this section if you have an OrderTimeline component and statusTimeline data */}
-          {/* <div>
-            <h3 className="font-bold mb-1">Status</h3>
-            <OrderTimeline steps={steps} />
-          </div> */}
+             className="w-full p-2 border border-gray-300 rounded-md bg-gray-50"
+             rows={3}
+             readOnly
+           />
+         </div>
         </div>
+
 
         {/* Right Section */}
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
