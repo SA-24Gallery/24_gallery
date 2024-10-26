@@ -27,54 +27,56 @@ export default function MyCartForm() {
     // Fetch order data from the API when the component mounts
     useEffect(() => {
         const fetchOrderData = async () => {
-            try {
-                const response = await fetch('/api/orders', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    console.error('Failed to fetch order data');
-                    setOrder(null);
-                    return;
-                }
-
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    setOrder({
-                        order_id: data[0].orderId,
-                        customer_name: data[0].customer,
-                        email: data[0].email,
-                        phone: data[0].phone,
-                        order_date: data[0].dateOrdered || "",
-                        received_date: data[0].dateReceived || "",
-                        payment_status: data[0].payment_status || 'N',
-                        products: data.map((product: any) => ({
-                            album_name: product.albumName,
-                            size: product.size,
-                            paper_type: product.paperType,
-                            printing_format: product.printingFormat,
-                            product_qty: product.productQty,
-                            price_per_unit: product.totalPrice / product.productQty,
-                            url: product.fileUrls,
-                        })),
-                    });
-                } else {
-                    setOrder(null);
-                }
-            } catch (err) {
-                console.error('Error fetching order data:', err);
-                setOrder(null);
-            } finally {
-                setLoading(false);
+          try {
+            const response = await fetch('/api/orders', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              credentials: 'include',
+            });
+      
+            if (!response.ok) {
+              console.error('Failed to fetch order data');
+              setOrder(null);
+              return;
             }
+      
+            const data = await response.json();
+            if (data && data.length > 0) {
+              const orderData = data[0]; // Assuming you want to display the first order
+              setOrder({
+                order_id: orderData.orderId,
+                customer_name: orderData.customer,
+                email: orderData.email,
+                phone: orderData.phone,
+                order_date: orderData.dateOrdered || "",
+                received_date: orderData.dateReceived || "",
+                payment_status: orderData.paymentStatus || 'N',
+                products: orderData.products.map((product: any) => ({
+                  album_name: product.albumName,
+                  size: product.size,
+                  paper_type: product.paperType,
+                  printing_format: product.printingFormat,
+                  product_qty: product.quantity,
+                  price_per_unit: product.price / product.quantity,
+                  url: product.fileUrls,
+                })),
+              });
+            } else {
+              setOrder(null);
+            }
+          } catch (err) {
+            console.error('Error fetching order data:', err);
+            setOrder(null);
+          } finally {
+            setLoading(false);
+          }
         };
-
+      
         fetchOrderData();
-    }, []);
+      }, []);
+          
 
     const handlePayment = () => {
         if (order && order.products.length > 0) {
