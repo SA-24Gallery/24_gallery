@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import {createNewOrder} from "@/app/api/create-new-order/route";
+import { createNewOrder } from "@/app/api/create-new-order/route";
 
 // Define the OrderBody type for creating an order
 type OrderBody = {
@@ -15,6 +15,7 @@ type OrderBody = {
   quantity: number;
   totalPrice: number;
 };
+
 // POST request handler: Create or update an order
 export async function POST(request: Request) {
   try {
@@ -40,8 +41,8 @@ export async function POST(request: Request) {
       const numberLength = 5;
 
       const result = await query<RowDataPacket[]>(
-          `SELECT product_id FROM Product
-     ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
+        `SELECT product_id FROM Product
+         ORDER BY CAST(SUBSTRING(product_id, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`
       );
 
       let nextProductId = '';
@@ -65,10 +66,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'User email not found' }, { status: 400 });
     }
 
-    // Check for existing order with payment_status 'N' (Not paid)
+    // Check for existing order with payment_status 'N' (Not paid) or order_date IS NULL
     const existingOrder = await query<RowDataPacket[]>(
-        `SELECT Order_id FROM orders WHERE email = ? AND order_date IS NULL`,
-        [email]
+      `SELECT Order_id FROM orders WHERE email = ? AND order_date IS NULL`,
+      [email]
     );
 
     let orderId;
@@ -100,41 +101,37 @@ export async function POST(request: Request) {
     `;
 
     await query<ResultSetHeader>(
-        insertProductSql,
-        [
-          productId,
-          albumName,
-          JSON.stringify(fileUrls),
-          size,
-          paperType,
-          printingFormat,
-          quantity,
-          totalPrice,
-          orderId,
-        ]
+      insertProductSql,
+      [
+        productId,
+        albumName,
+        JSON.stringify(fileUrls),
+        size,
+        paperType,
+        printingFormat,
+        quantity,
+        totalPrice,
+        orderId,
+      ]
     );
 
     return NextResponse.json(
-        {
-          success: true,
-          orderId: orderId,
-          message: 'Order updated successfully'
-        },
-        { status: 200 }
+      {
+        success: true,
+        orderId: orderId,
+        message: 'Order updated successfully'
+      },
+      { status: 200 }
     );
 
   } catch (error: any) {
     console.error('Error creating or updating order:', error);
     return NextResponse.json(
-        { error: "Error creating or updating order", message: error.message },
-        { status: 500 }
+      { error: "Error creating or updating order", message: error.message },
+      { status: 500 }
     );
   }
 }
-
-
-// GET request handler: Fetch orders
-// ... (imports and other code)
 
 // GET request handler: Fetch orders
 export async function GET(request: Request) {
@@ -147,12 +144,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
     const email = searchParams.get('email');
+    const paymentStatus = searchParams.get('payment_status'); // Optional filter
+    const orderDateNull = searchParams.get('order_date_null'); // Optional filter
 
     let sql = '';
     const queryParams: any[] = [];
 
     if (session.user.role === 'A') {
-      // For admin: Fetch all orders including customer name and phone
+      // Admin: Fetch all orders
       sql = `
         SELECT 
           o.Order_id AS orderId,
@@ -160,7 +159,7 @@ export async function GET(request: Request) {
           u.Phone_number AS phone,
           p.Album_name AS albumName,
           p.Url AS fileUrls,
-          p.Size,
+          p.Size AS size,
           p.Paper_type AS paperType,
           p.Printing_format AS printingFormat,
           p.Product_qty AS productQty,
@@ -187,7 +186,7 @@ export async function GET(request: Request) {
         WHERE 1=1
       `;
     } else {
-      // For regular user: Fetch only their orders
+      // User: Fetch only their orders
       sql = `
         SELECT 
           o.Order_id AS orderId,
@@ -195,7 +194,7 @@ export async function GET(request: Request) {
           u.Phone_number AS phone,
           p.Album_name AS albumName,
           p.Url AS fileUrls,
-          p.Size,
+          p.Size AS size,
           p.Paper_type AS paperType,
           p.Printing_format AS printingFormat,
           p.Product_qty AS productQty,
@@ -234,12 +233,22 @@ export async function GET(request: Request) {
       queryParams.push(email);
     }
 
+    // **Add Optional Filters**
+    if (paymentStatus) {
+      sql += ` AND o.Payment_status = ?`;
+      queryParams.push(paymentStatus);
+    }
+
+    if (orderDateNull === 'true') {
+      sql += ` AND o.Order_date IS NULL`;
+    }
+
     sql += ` ORDER BY o.Order_date DESC`;
 
     const orders = await query<RowDataPacket[]>(sql, queryParams);
 
-    // Group orders by orderId
-    const orderMap = new Map();
+    // Transform and group orders and their products
+    const orderMap = new Map<string, any>();
 
     orders.forEach(order => {
       if (!orderMap.has(order.orderId)) {
@@ -250,14 +259,15 @@ export async function GET(request: Request) {
           phone: order.phone,
           email: order.email,
           shippingOption: order.shippingOption,
-          dateOrdered: order.dateOrdered ? formatDate(order.dateOrdered) : null,
-          dateReceived: order.dateReceived ? formatDate(order.dateReceived) : null,
+          dateOrdered: order.dateOrdered,
+          dateReceived: order.dateReceived,
           paymentStatus: order.paymentStatus,
           note: order.note,
           products: [],
           status: order.status
         });
       }
+
       // Add the product to the products array
       const currentOrder = orderMap.get(order.orderId);
 
@@ -282,7 +292,7 @@ export async function GET(request: Request) {
       currentOrder.products.push({
         albumName: order.albumName,
         fileUrls: fileUrls,
-        size: order.Size,
+        size: order.size,
         paperType: order.paperType,
         printingFormat: order.printingFormat,
         quantity: order.productQty,
@@ -315,7 +325,6 @@ function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
-
 
 // Handler for PUT requests to update order status
 export async function PUT(request: Request) {
@@ -379,8 +388,8 @@ export async function DELETE(request: Request) {
     if (session.user.role !== 'A') {
       const orderSql = `SELECT email FROM orders WHERE Order_id = ?`;
       const [orderResult] = await query<RowDataPacket[]>(orderSql, [orderId]);
-      
-      if (!orderResult || orderResult[0].email !== session.user.email) {
+
+      if (!orderResult || orderResult.email !== session.user.email) {
         return NextResponse.json(
           { error: "Unauthorized to cancel this order" },
           { status: 403 }
@@ -388,12 +397,13 @@ export async function DELETE(request: Request) {
       }
     }
 
-    // Update order status to cancelled
-    const insertStatusSql = `
-      INSERT INTO STATUS (Order_id, Status_name, Status_date)
-      VALUES (?, 'Cancelled', NOW())
-    `;
-    await query<ResultSetHeader>(insertStatusSql, [orderId]);
+    // Delete products associated with the order
+    const deleteProductsSql = `DELETE FROM Product WHERE Order_id = ?`;
+    await query<ResultSetHeader>(deleteProductsSql, [orderId]);
+
+    // Delete the order
+    const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
+    await query<ResultSetHeader>(deleteOrderSql, [orderId]);
 
     return NextResponse.json(
       { success: true, message: 'Order cancelled successfully' },
@@ -408,4 +418,3 @@ export async function DELETE(request: Request) {
     );
   }
 }
-

@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation'; // Correct import from next/navigation
+import { useRouter } from 'next/navigation';
 import ProductItem from '@/components/order-details/product-item';
 import { Button } from "@/components/ui/button";
 
 export default function MyCartForm() {
-    const router = useRouter(); // Initialize router using next/navigation
+    const router = useRouter();
 
     // State for managing the order
     const [order, setOrder] = useState<{
@@ -27,56 +27,55 @@ export default function MyCartForm() {
     // Fetch order data from the API when the component mounts
     useEffect(() => {
         const fetchOrderData = async () => {
-          try {
-            const response = await fetch('/api/orders', {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include',
-            });
-      
-            if (!response.ok) {
-              console.error('Failed to fetch order data');
-              setOrder(null);
-              return;
+            try {
+                const response = await fetch('/api/orders?payment_status=N&order_date_null=true', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to fetch order data');
+                    setOrder(null);
+                    return;
+                }
+
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const orderData = data[0]; // Assuming you want to display the first unpaid order
+                    setOrder({
+                        order_id: orderData.orderId,
+                        customer_name: orderData.customer,
+                        email: orderData.email,
+                        phone: orderData.phone,
+                        order_date: orderData.dateOrdered || "",
+                        received_date: orderData.dateReceived || "",
+                        payment_status: orderData.paymentStatus || 'N',
+                        products: orderData.products.map((product: any) => ({
+                            album_name: product.albumName,
+                            size: product.size,
+                            paper_type: product.paperType,
+                            printing_format: product.printingFormat,
+                            product_qty: product.quantity,
+                            price_per_unit: product.price / product.quantity,
+                            url: product.fileUrls,
+                        })),
+                    });
+                } else {
+                    setOrder(null);
+                }
+            } catch (err) {
+                console.error('Error fetching order data:', err);
+                setOrder(null);
+            } finally {
+                setLoading(false);
             }
-      
-            const data = await response.json();
-            if (data && data.length > 0) {
-              const orderData = data[0]; // Assuming you want to display the first order
-              setOrder({
-                order_id: orderData.orderId,
-                customer_name: orderData.customer,
-                email: orderData.email,
-                phone: orderData.phone,
-                order_date: orderData.dateOrdered || "",
-                received_date: orderData.dateReceived || "",
-                payment_status: orderData.paymentStatus || 'N',
-                products: orderData.products.map((product: any) => ({
-                  album_name: product.albumName,
-                  size: product.size,
-                  paper_type: product.paperType,
-                  printing_format: product.printingFormat,
-                  product_qty: product.quantity,
-                  price_per_unit: product.price / product.quantity,
-                  url: product.fileUrls,
-                })),
-              });
-            } else {
-              setOrder(null);
-            }
-          } catch (err) {
-            console.error('Error fetching order data:', err);
-            setOrder(null);
-          } finally {
-            setLoading(false);
-          }
         };
-      
+
         fetchOrderData();
-      }, []);
-          
+    }, []);
 
     const handlePayment = () => {
         if (order && order.products.length > 0) {
@@ -84,14 +83,35 @@ export default function MyCartForm() {
         }
     };
 
-    const handleRemoveProduct = (index: number) => {
-        setOrder(prevOrder => {
-            if (prevOrder) {
-                const updatedProducts = prevOrder.products.filter((_, i) => i !== index);
-                return { ...prevOrder, products: updatedProducts };
+    const handleRemoveProduct = async (index: number) => {
+        if (!order) return;
+
+        const updatedProducts = order.products.filter((_, i) => i !== index);
+
+        if (updatedProducts.length === 0) {
+            // If all products are removed, delete the order
+            try {
+                const response = await fetch(`/api/orders?orderId=${order.order_id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to delete order');
+                } else {
+                    setOrder(null);
+                }
+            } catch (err) {
+                console.error('Error deleting order:', err);
             }
-            return prevOrder;
-        });
+        } else {
+            // Otherwise, update the order with the remaining products
+            setOrder({ ...order, products: updatedProducts });
+            // You may need to make an API call to update the order in the backend
+        }
     };
 
     const totalPrice = (order?.products.reduce((total, product) => {
@@ -140,7 +160,7 @@ export default function MyCartForm() {
                             </div>
                             <div className="mb-4">
                                 <h3 className="font-bold">Date ordered</h3>
-                                <p>{formatDate(order.order_date) || "N/A"}</p>
+                                <p>{order.order_date ? formatDate(order.order_date) : "N/A"}</p>
                             </div>
                             <div className="mb-4">
                                 <h3 className="font-bold">Date received</h3>
