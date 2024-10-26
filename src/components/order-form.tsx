@@ -57,29 +57,29 @@ const OrderForm = () => {
   const uploadFiles = async (): Promise<string[]> => {
     setUploading(true);
     try {
-      const urls = await Promise.all(
-          files.map(async (file) => {
-            // Create FormData to send file
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('albumName', albumName); // Include album name if needed
-
-            // Send POST request to upload API
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData,
-            });
-
-            if (!response.ok) {
-              throw new Error('File upload failed');
-            }
-
-            const { url } = await response.json();
-            return url;
-          })
+      const keys = await Promise.all(
+        files.map(async (file) => {
+          // Create FormData to send file
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('albumName', albumName);
+  
+          // Send POST request to upload API
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+  
+          if (!response.ok) {
+            throw new Error('File upload failed');
+          }
+  
+          const { key } = await response.json();
+          return key; // Store the object key
+        })
       );
-      setUploadedUrls(urls);
-      return urls;
+      setUploadedUrls(keys);
+      return keys;
     } catch (error) {
       console.error('Error uploading files:', error);
       throw error;

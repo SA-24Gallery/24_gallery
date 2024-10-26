@@ -20,7 +20,12 @@ export default function MyOrderDetailsPage() {
           throw new Error(`Failed to fetch order details: ${response.statusText}`);
         }
         const orderData = await response.json();
-        setOrder(orderData[0]); // Assuming the response is an array with one order object
+        if (orderData && orderData.length > 0) {
+          setOrder(orderData[0]); // Assuming the response is an array with one order object
+        } else {
+          setOrder(null);
+          setError("Order not found.");
+        }
       } catch (error: any) {
         setError(error.message);
       } finally {
@@ -30,10 +35,14 @@ export default function MyOrderDetailsPage() {
 
     if (orderId) {
       fetchOrderDetails();
+    } else {
+      setLoading(false);
+      setError("No order ID provided.");
     }
   }, [orderId]);
 
   const formatDate = (dateString: string): string => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   };
@@ -86,35 +95,36 @@ export default function MyOrderDetailsPage() {
           <div>
             <h3 className="font-bold mb-1">Optional Notes or Address</h3>
             <textarea
-              value={order.note || "No additional notes provided."} // ดึงข้อมูล Note ออกมาแสดง
+              value={order.note || "No additional notes provided."}
               className="w-full p-2 border border-gray-300 rounded-md bg-gray-50"
               rows={3}
-              readOnly 
+              readOnly
             />
           </div>
-          <div>
+          {/* Uncomment this section if you have an OrderTimeline component and statusTimeline data */}
+          {/* <div>
             <h3 className="font-bold mb-1">Status</h3>
             <OrderTimeline steps={steps} />
-          </div>
+          </div> */}
         </div>
 
         {/* Right Section */}
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
             <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-              {/* Payment Status Section */}
-              <div>
-                  {order.paymentStatus === 'N' && (
-                       <p className="text-red-500 font-bold">Payment Not Approved</p>
-                     )}
-                     {order.paymentStatus === 'A' && (
-                        <p className="text-green-500 font-bold">Payment Approved</p>
-                     )}
-              </div>
-              
+            {/* Payment Status Section */}
+            <div>
+              {order.paymentStatus === 'N' && (
+                <p className="text-red-500 font-bold">Payment Not Approved</p>
+              )}
+              {order.paymentStatus === 'A' && (
+                <p className="text-green-500 font-bold">Payment Approved</p>
+              )}
+            </div>
+
             <p>Shipping option: {getShippingOptionDisplay(order.shippingOption)}</p>
 
-            {order.shippingOption === "D" && (
+            {order.shippingOption === "D" && order.trackingNumber && (
               <p>Tracking Number: #{order.trackingNumber}</p>
             )}
 
@@ -132,8 +142,8 @@ export default function MyOrderDetailsPage() {
                         paper_type={product.paperType}
                         printing_format={product.printingFormat}
                         product_qty={product.quantity}
-                        price_per_unit={product.price}
-                        url={product.url}
+                        price_per_unit={product.price / product.quantity}
+                        url={product.fileUrls}
                       />
                     </div>
                   ))}

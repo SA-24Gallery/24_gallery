@@ -1,3 +1,5 @@
+// upload/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
@@ -12,44 +14,39 @@ const s3Client = new S3Client({
 
 export async function POST(req: NextRequest) {
   try {
-    const chunks: Uint8Array[] = [];
-    const reader = req.body?.getReader();
-    if (!reader) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    // Parse the request to get the file and album name
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    const albumName = formData.get('albumName') as string || 'default';
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    let done: boolean | undefined = false;
-    while (!done) {
-      const { done: isDone, value } = await reader.read();
-      if (value) {
-        chunks.push(value);
-      }
-      done = isDone;
-    }
+    // Read the file content
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const buffer = Buffer.concat(chunks);
-    const contentType = req.headers.get('content-type') || 'application/octet-stream';
-    
-    // Generate a unique filename with timestamp and random string
+    // Generate a unique filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = contentType.split('/')[1] || 'jpg';
+    const extension = file.name.split('.').pop() || 'jpg';
     const fileName = `${timestamp}-${randomString}.${extension}`;
-    
-    // Create the file path in the receipt folder
-    const fileKey = `receipt/${fileName}`;
+
+    // Create the file path in the specified album folder
+    const fileKey = `albums/${albumName}/${fileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME!,
       Key: fileKey,
       Body: buffer,
-      ContentType: contentType,
+      ContentType: file.type,
     });
 
     await s3Client.send(command);
 
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-    return NextResponse.json({ url: fileUrl });
+    // Return the object key instead of the full URL
+    return NextResponse.json({ key: fileKey });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });

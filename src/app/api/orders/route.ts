@@ -1,9 +1,32 @@
+// orders/route.ts
+
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createNewOrder } from "@/app/api/create-new-order/route";
+import AWS from 'aws-sdk';
+
+// Configure AWS SDK
+AWS.config.update({
+  region: process.env.AWS_REGION, // e.g., 'us-east-1'
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!, // Your AWS Access Key ID
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!, // Your AWS Secret Access Key
+});
+
+const s3 = new AWS.S3();
+
+// Function to generate a pre-signed URL
+function getPreSignedUrl(key: string): string {
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME!, // Your S3 bucket name
+    Key: key,
+    Expires: 60 * 60, // URL expires in 1 hour
+  };
+
+  return s3.getSignedUrl('getObject', params);
+}
 
 // Define the OrderBody type for creating an order
 type OrderBody = {
@@ -105,7 +128,7 @@ export async function POST(request: Request) {
       [
         productId,
         albumName,
-        JSON.stringify(fileUrls),
+        JSON.stringify(fileUrls), // Store the object keys as JSON
         size,
         paperType,
         printingFormat,
@@ -119,7 +142,7 @@ export async function POST(request: Request) {
       {
         success: true,
         orderId: orderId,
-        message: 'Order updated successfully'
+        message: 'Order updated successfully',
       },
       { status: 200 }
     );
@@ -233,7 +256,7 @@ export async function GET(request: Request) {
       queryParams.push(email);
     }
 
-    // **Add Optional Filters**
+    // Add Optional Filters
     if (paymentStatus) {
       sql += ` AND o.Payment_status = ?`;
       queryParams.push(paymentStatus);
@@ -264,7 +287,7 @@ export async function GET(request: Request) {
           paymentStatus: order.paymentStatus,
           note: order.note,
           products: [],
-          status: order.status
+          status: order.status,
         });
       }
 
@@ -289,14 +312,17 @@ export async function GET(request: Request) {
         fileUrls = [];
       }
 
+      // Generate pre-signed URLs
+      const preSignedUrls = fileUrls.map((key: string) => getPreSignedUrl(key));
+
       currentOrder.products.push({
         albumName: order.albumName,
-        fileUrls: fileUrls,
+        fileUrls: preSignedUrls, // Use pre-signed URLs
         size: order.size,
         paperType: order.paperType,
         printingFormat: order.printingFormat,
         quantity: order.productQty,
-        price: order.totalPrice
+        price: order.totalPrice,
       });
     });
 
