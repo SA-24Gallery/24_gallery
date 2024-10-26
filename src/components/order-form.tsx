@@ -1,5 +1,3 @@
-// components/order-form.tsx
-
 "use client";
 
 import React, { useState } from 'react';
@@ -16,6 +14,7 @@ const OrderForm = () => {
   const [paperType, setPaperType] = useState('');
   const [printingFormat, setPrintingFormat] = useState('');
   const [quantity, setQuantity] = useState<number>(0);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [formErrors, setFormErrors] = useState({
     albumName: false,
     files: false,
@@ -41,42 +40,60 @@ const OrderForm = () => {
     '16 x 20': 300,
   };
 
+  // Function to validate file types
+  const validateFiles = (fileList: File[]): boolean => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    return fileList.every(file => validTypes.includes(file.type));
+  };
+
   // Function to handle file selection
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const selectedFiles = Array.from(e.target.files);
+      if (!validateFiles(selectedFiles)) {
+        alert('Please upload only image files (JPEG, PNG, GIF, WEBP)');
+        return;
+      }
+      setFiles(selectedFiles);
     }
   };
 
   // Function to upload files using the upload API
   const uploadFiles = async (productId: string): Promise<void> => {
     setUploading(true);
+    setUploadProgress(0);
+
     try {
-      const uploadPromises = files.map(async (file, index) => {
-        // Create FormData to send file
-        const formData = new FormData();
+      // Create a single FormData instance for all files
+      const formData = new FormData();
+      files.forEach((file, index) => {
         formData.append('file', file);
-        formData.append('productId', productId);
-        formData.append('sequence', (index + 1).toString());
+      });
+      formData.append('productId', productId);
 
-        // Send POST request to upload API
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('File upload failed');
-        }
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-      await Promise.all(uploadPromises);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error('Upload failed');
+      }
+      console.log(data.s3FolderUrl)
+      return data.folderKey;
 
     } catch (error) {
       console.error('Error uploading files:', error);
       throw error;
     } finally {
       setUploading(false);
+      setUploadProgress(100);
     }
   };
 
@@ -100,6 +117,8 @@ const OrderForm = () => {
     }
 
     try {
+      setUploading(true);
+
       // Calculate total price
       const totalPrice = priceList[size] * quantity * files.length;
 
@@ -109,12 +128,13 @@ const OrderForm = () => {
         size,
         paperType,
         printingFormat,
-        quantity: quantity * files.length, // Multiply by number of files
+        quantity: quantity * files.length,
         totalPrice,
+        numberOfFiles: files.length,
       };
 
-      // Send the order data to the backend
-      const response = await fetch('/api/orders', {
+      // Create order first
+      const orderResponse = await fetch('/api/add-product-to-cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,192 +142,245 @@ const OrderForm = () => {
         body: JSON.stringify(productData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
         throw new Error(errorData.message || 'Failed to create order');
       }
 
-      const data = await response.json();
-      const { productId } = data;
+      const orderData = await orderResponse.json();
+      const productId = orderData.productId;
 
-      // Upload files using the productId
-      await uploadFiles(productId);
+      // Upload files and get the folder information
+      const uploadResult = await uploadFiles(productId);
 
-      alert('Product added to the order successfully!');
+      // Update the product URL in the database
+      const updateUrlResponse = await fetch('/api/add-product-to-cart/update-url', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId,
+          url: uploadResult // This should be the folderKey from the upload response
+        }),
+      });
 
-      // Reset form fields
+      if (!updateUrlResponse.ok) {
+        const errorData = await updateUrlResponse.json();
+        throw new Error(errorData.message || 'Failed to update product URL');
+      }
+
+      alert('Order created and files uploaded successfully!');
+
+      // Reset form
       setAlbumName('');
       setFiles([]);
       setSize('');
       setPaperType('');
       setPrintingFormat('');
       setQuantity(0);
+      setUploadProgress(0);
 
-      // Redirect to cart or order page
-      router.push('/cart');
+      // Redirect to cart
+      router.push('/my-cart');
 
     } catch (error: any) {
       console.error('Error in handleSubmit:', error);
-      alert(`Failed to add product: ${error.message || 'Unknown error'}`);
+      alert(`Failed to process order: ${error.message || 'Unknown error'}`);
+    } finally {
+      setUploading(false);
     }
   };
 
+  // Preview component for selected files
+  const FilePreview = () => (
+      <div className="grid grid-cols-5 gap-1 mt-2">
+        {files.map((file, index) => (
+            <div key={index} className="relative group">
+              <div className="relative w-24 h-24">
+                <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover rounded-md"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center rounded-md">
+              <span className="text-white font-bold text-lg">
+                {index + 1}
+              </span>
+                </div>
+              </div>
+            </div>
+        ))}
+      </div>
+  );
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
-      <div className="flex flex-col items-left bg-white px-[50px] py-[40px] gap-7 w-[814px] h-fit rounded-[20px]">
-        {/* Album name */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Album name:</label>
-          <input
-            className={`p-2 text-base border ${formErrors.albumName ? 'border-red-500' : 'border-black'} rounded-md`}
-            type="text"
-            value={albumName}
-            onChange={(e) => setAlbumName(e.target.value)}
-          />
-          {formErrors.albumName && (
-            <span className="text-xs text-red-500 mt-1">
+      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
+        <div className="flex flex-col items-left bg-white px-[50px] py-[40px] gap-7 w-[814px] h-fit rounded-[20px]">
+          {/* Album name */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Album name:</label>
+            <input
+                className={`p-2 text-base border ${formErrors.albumName ? 'border-red-500' : 'border-black'} rounded-md`}
+                type="text"
+                value={albumName}
+                onChange={(e) => setAlbumName(e.target.value)}
+            />
+            {formErrors.albumName && (
+                <span className="text-xs text-red-500 mt-1">
               * Please enter the album name
             </span>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Upload file */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Upload file:</label>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileUpload}
-            className={`p-2 text-base border ${formErrors.files ? 'border-red-500' : 'border-black'} rounded-md`}
-          />
-          {formErrors.files && (
-            <span className="text-xs text-red-500 mt-1">
+          {/* Upload file */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Upload file:</label>
+            <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileUpload}
+                className={`p-2 text-base border ${formErrors.files ? 'border-red-500' : 'border-black'} rounded-md`}
+            />
+            {files.length > 0 && <FilePreview />}
+            {formErrors.files && (
+                <span className="text-xs text-red-500 mt-1">
               * Please upload at least one image
             </span>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Size selection */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Size:</label>
-          <select
-            value={size}
-            onChange={(e) => setSize(e.target.value)}
-            className={`p-2 text-base border ${formErrors.size ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
-          >
-            <option value="">Select size</option>
-            {Object.keys(priceList).map((sizeOption) => (
-              <option key={sizeOption} value={sizeOption}>
-                {sizeOption}
-              </option>
-            ))}
-          </select>
-          {formErrors.size && (
-            <span className="text-xs text-red-500 mt-1">
+          {/* Size selection */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Size:</label>
+            <select
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                className={`p-2 text-base border ${formErrors.size ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
+            >
+              <option value="">Select size</option>
+              {Object.keys(priceList).map((sizeOption) => (
+                  <option key={sizeOption} value={sizeOption}>
+                    {sizeOption}
+                  </option>
+              ))}
+            </select>
+            {formErrors.size && (
+                <span className="text-xs text-red-500 mt-1">
               * Please select a size
             </span>
-          )}
-        </div>
-
-        {/* Paper type selection */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Paper type:</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`p-2 rounded-md ${paperType === 'matte' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
-              onClick={() => setPaperType('matte')}
-            >
-              Matte
-            </button>
-            <button
-              type="button"
-              className={`p-2 rounded-md ${paperType === 'glossy' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
-              onClick={() => setPaperType('glossy')}
-            >
-              Glossy
-            </button>
+            )}
           </div>
-          {formErrors.paperType && (
-            <span className="text-xs text-red-500 mt-1">
+
+          {/* Paper type selection */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Paper type:</label>
+            <div className="flex gap-2">
+              <button
+                  type="button"
+                  className={`p-2 rounded-md ${paperType === 'matte' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  onClick={() => setPaperType('matte')}
+              >
+                Matte
+              </button>
+              <button
+                  type="button"
+                  className={`p-2 rounded-md ${paperType === 'glossy' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  onClick={() => setPaperType('glossy')}
+              >
+                Glossy
+              </button>
+            </div>
+            {formErrors.paperType && (
+                <span className="text-xs text-red-500 mt-1">
               * Please select a paper type
             </span>
-          )}
-        </div>
-
-        {/* Printing format selection */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Printing format:</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`p-2 rounded-md ${printingFormat === 'full page' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
-              onClick={() => setPrintingFormat('full page')}
-            >
-              Full page
-            </button>
-            <button
-              type="button"
-              className={`p-2 rounded-md ${printingFormat === 'full file' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
-              onClick={() => setPrintingFormat('full file')}
-            >
-              Full file
-            </button>
-            <button
-              type="button"
-              className={`p-2 rounded-md ${printingFormat === 'white border' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
-              onClick={() => setPrintingFormat('white border')}
-            >
-              White border
-            </button>
+            )}
           </div>
-          {formErrors.printingFormat && (
-            <span className="text-xs text-red-500 mt-1">
+
+          {/* Printing format selection */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Printing format:</label>
+            <div className="flex gap-2">
+              <button
+                  type="button"
+                  className={`p-2 rounded-md ${printingFormat === 'full page' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  onClick={() => setPrintingFormat('full page')}
+              >
+                Full page
+              </button>
+              <button
+                  type="button"
+                  className={`p-2 rounded-md ${printingFormat === 'full file' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  onClick={() => setPrintingFormat('full file')}
+              >
+                Full file
+              </button>
+              <button
+                  type="button"
+                  className={`p-2 rounded-md ${printingFormat === 'white border' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  onClick={() => setPrintingFormat('white border')}
+              >
+                White border
+              </button>
+            </div>
+            {formErrors.printingFormat && (
+                <span className="text-xs text-red-500 mt-1">
               * Please select a printing format
             </span>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Quantity per file */}
-        <div className="flex flex-col mb-3">
-          <label className="text-[20px] font-bold mb-2">Quantity per file:</label>
-          <input
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            min={1}
-            className={`p-2 text-base border ${formErrors.quantity ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
-          />
-          {formErrors.quantity && (
-            <span className="text-xs text-red-500 mt-1">
+          {/* Quantity per file */}
+          <div className="flex flex-col mb-3">
+            <label className="text-[20px] font-bold mb-2">Quantity per file:</label>
+            <input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                min={1}
+                className={`p-2 text-base border ${formErrors.quantity ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
+            />
+            {formErrors.quantity && (
+                <span className="text-xs text-red-500 mt-1">
               * Please enter a valid quantity
             </span>
+            )}
+          </div>
+
+          {/* Total price display */}
+          <div className="flex justify-end items-center mb-2">
+            <label className="text-[20px] font-bold mr-3">Total price:</label>
+            <p className="text-[20px] font-bold text-red-500">
+              {priceList[size] && quantity > 0 ? priceList[size] * quantity * files.length : 0} Baht
+            </p>
+          </div>
+
+          {/* Upload progress */}
+          {uploading && (
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                    className="bg-black h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
           )}
-        </div>
 
-        {/* Total price display */}
-        <div className="flex justify-end items-center mb-2">
-          <label className="text-[20px] font-bold mr-3">Total price:</label>
-          <p className="text-[20px] font-bold text-red-500">
-            {priceList[size] && quantity > 0 ? priceList[size] * quantity * files.length : 0} Baht
-          </p>
+          {/* Submit button */}
+          <div className="flex justify-end w-full mt-[-20px]">
+            <button
+                type="submit"
+                disabled={uploading}
+                className={`flex justify-center items-center px-6 py-3 bg-black text-white text-[20px] font-bold rounded-md ${
+                    uploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'
+                }`}
+            >
+              {uploading ? 'Uploading...' : 'Add to Cart'}
+            </button>
+          </div>
         </div>
-
-        {/* Submit button */}
-        <div className="flex justify-end w-full mt-[-20px]">
-          <button
-            type="submit"
-            disabled={uploading}
-            className={`flex justify-center items-center px-6 py-3 bg-black text-white text-[20px] font-bold rounded-md ${
-              uploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'
-            }`}
-          >
-            {uploading ? 'Submitting...' : 'Add to Cart'}
-          </button>
-        </div>
-      </div>
-    </form>
+      </form>
   );
 };
 
