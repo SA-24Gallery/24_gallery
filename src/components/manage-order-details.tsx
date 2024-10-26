@@ -1,41 +1,47 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ProductItem from '@/components/order-details/product-item';
 import { Button } from "@/components/ui/button";
 import OrderTimeline from "@/components/order-details/order-timeline";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, } from "@/components/ui/alert-dialog";
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import ProductItem from "@/components/order-details/product-item";
 
 interface OrderType {
-  orderId: string;
-  customer: string;
-  email: string;
-  phone: string;
-  dateOrdered: string;
-  dateReceived: string;
-  notes: string;
-  payment_status: string;
-  shippingOption: string;
-  products: ProductType[];
-  trackingNumber: string;
-  receipt_pic: string;
+    orderId: string;
+    customer: string;
+    email: string;
+    phone: string;
+    dateOrdered: string;
+    dateReceived: string;
+    notes: string;
+    payment_status: string;
+    shippingOption: string;
+    products: ProductType[];
+    trackingNumber: string;
+    receipt_pic: string;
+    statusTimeline: StatusStep[];
 }
 
 interface ProductType {
-  albumName: string;
-  size: string;
-  paperType: string;
-  printingFormat: string;
-  quantity: number;
-  price: number;
-  fileUrls: string[];
+    albumName: string;
+    size: string;
+    paperType: string;
+    printingFormat: string;
+    quantity: number;
+    price: number;
+    folderPath: string;
+}
+
+interface StatusStep {
+    title: string;
+    date: string;
+    time: string;
+    completed: boolean;
 }
 
 export default function ManageOrderDetails() {
-    const [steps, setSteps] = useState<{ title: string, date: string, time: string, completed: boolean }[]>([]);
+    const [steps, setSteps] = useState<StatusStep[]>([]);
     const [currentStatusIndex, setCurrentStatusIndex] = useState(0);
     const [order, setOrder] = useState<OrderType | null>(null);
     const [loading, setLoading] = useState(true);
@@ -52,8 +58,31 @@ export default function ManageOrderDetails() {
                 }
                 const orderData = await response.json();
                 if (orderData && orderData.length > 0) {
-                    setOrder(orderData[0]); // Assuming the response is an array with one order object
-                    setSteps(orderData[0].statusTimeline || []);
+                    const fetchedOrder = orderData[0];
+                    setOrder({
+                        orderId: fetchedOrder.orderId,
+                        customer: fetchedOrder.customer,
+                        email: fetchedOrder.email,
+                        phone: fetchedOrder.phone,
+                        dateOrdered: fetchedOrder.dateOrdered,
+                        dateReceived: fetchedOrder.dateReceived,
+                        notes: fetchedOrder.note || "",
+                        payment_status: fetchedOrder.paymentStatus || "Pending",
+                        shippingOption: fetchedOrder.shippingOption || "N/A",
+                        trackingNumber: fetchedOrder.trackingNumber || "",
+                        receipt_pic: fetchedOrder.receipt_pic || "",
+                        statusTimeline: fetchedOrder.statusTimeline || [],
+                        products: fetchedOrder.products.map((product: any) => ({
+                            albumName: product.albumName,
+                            size: product.size,
+                            paperType: product.paperType,
+                            printingFormat: product.printingFormat,
+                            quantity: product.quantity,
+                            price: product.price / product.quantity,
+                            folderPath: product.folderPath,
+                        })),
+                    });
+                    setSteps(fetchedOrder.statusTimeline || []);
                 } else {
                     setOrder(null);
                     setError("Order not found.");
@@ -117,7 +146,10 @@ export default function ManageOrderDetails() {
 
     const shippingCost = order.shippingOption === "D" ? 50 : 0;
 
-    const totalPrice = order.products.reduce((total: number, product: ProductType) => total + (product.price * product.quantity), 0) + shippingCost;
+    const totalPrice = order.products.reduce(
+        (total: number, product: ProductType) => total + product.price * product.quantity,
+        0
+    ) + shippingCost;
 
     return (
         <div className="w-full flex justify-center">
@@ -137,7 +169,7 @@ export default function ManageOrderDetails() {
                     </div>
                     <div>
                         <h3 className="font-bold mb-1">Date received</h3>
-                        <p>{formatDate(order.dateReceived)}</p>
+                        <p>{order.dateReceived ? formatDate(order.dateReceived) : "N/A"}</p>
                     </div>
                     <div>
                         <h3 className="font-bold mb-1">Notes</h3>
@@ -180,7 +212,9 @@ export default function ManageOrderDetails() {
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-                        <p className="mb-2">Shipping option: {order.shippingOption}</p>
+                        <p className="mb-2">
+                            Shipping option: {order.shippingOption === "D" ? "Delivery" : "Pick Up"}
+                        </p>
 
                         {order.trackingNumber && (
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
@@ -189,11 +223,13 @@ export default function ManageOrderDetails() {
                         <p className="mb-2">Payment status: {order.payment_status}</p>
 
                         <div className="flex space-x-4 mb-4">
-                            <Button variant="default" size="default">
-                                <a href={order.receipt_pic} target="_blank" rel="noopener noreferrer">
-                                    View Receipt
-                                </a>
-                            </Button>
+                            {order.receipt_pic && (
+                                <Button variant="default" size="default">
+                                    <a href={order.receipt_pic} target="_blank" rel="noopener noreferrer">
+                                        View Receipt
+                                    </a>
+                                </Button>
+                            )}
 
                             {order.payment_status !== "Approved" && (
                                 <AlertDialog>
@@ -238,7 +274,7 @@ export default function ManageOrderDetails() {
                                                 printing_format={product.printingFormat}
                                                 product_qty={product.quantity}
                                                 price_per_unit={product.price}
-                                                url={product.fileUrls[0]} 
+                                                folderPath={product.folderPath} // Pass folderPath here
                                             />
                                         </div>
                                     ))}
