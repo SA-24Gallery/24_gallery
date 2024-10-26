@@ -474,7 +474,28 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { orderId, status, receivedDate, trackingNumber, shippingOption, note, payment_status, order_date } = body;
+    const {
+      orderId,
+      status = null,                     // Default to null if not provided
+      receivedDate = null,
+      trackingNumber = null,
+      shippingOption = null,
+      note = null,
+      payment_status = null,
+      order_date = null,
+    } = body;
+
+    // Log values for debugging
+    console.log({
+      orderId,
+      status,
+      receivedDate,
+      trackingNumber,
+      shippingOption,
+      note,
+      payment_status,
+      order_date,
+    });
 
     // Ensure user has permission to update this order
     if (session.user.role !== 'A') {
@@ -482,13 +503,16 @@ export async function PUT(request: Request) {
         `SELECT email FROM Orders WHERE Order_id = ?`,
         [orderId]
       );
-      
+
       if (!orderRows.length || orderRows[0].email !== session.user.email) {
-        return NextResponse.json({ error: 'Unauthorized to modify this order' }, { status: 403 });
+        return NextResponse.json(
+          { error: 'Unauthorized to modify this order' },
+          { status: 403 }
+        );
       }
     }
 
-    // Update order with new details including status, tracking, shipping, note, and payment status
+    // Update order with new details including status, tracking, shipping, note, payment status, and order_date
     const updateOrderSql = `
       UPDATE Orders 
       SET Received_date = ?,
@@ -506,10 +530,10 @@ export async function PUT(request: Request) {
       note,
       payment_status,
       order_date,
-      orderId
+      orderId,
     ]);
 
-    // Insert new status 
+    // Insert new status if provided
     if (status) {
       const insertStatusSql = `
         INSERT INTO Status (Order_id, Status_name, Status_date)
