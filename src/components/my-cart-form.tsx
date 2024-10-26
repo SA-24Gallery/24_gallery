@@ -90,7 +90,7 @@ export default function MyCartForm() {
                         orderId: order.order_id,
                         shippingOption,
                         note,
-                        payment_status: 'P',
+                        payment_status: 'N',
                         order_date: new Date(),        // Set current date as order date
                         payment_deadline: paymentDeadline  // Set payment deadline
                     }),
