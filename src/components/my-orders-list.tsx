@@ -96,7 +96,9 @@ export function MyOrdersList() {
       return 'Payment Not Approved';
     } else if (order.paymentStatus === 'A') {
       return order.status;
-    }
+    } else if (order.paymentStatus === 'P') {
+      return "Pending";
+    } 
     return 'Unknown Status';
   };
 

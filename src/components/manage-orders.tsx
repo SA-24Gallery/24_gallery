@@ -149,7 +149,8 @@ export function ManageOrders() {
             className="p-2 border border-gray-300 rounded-lg"
           >
             <option value="">All Orders</option>
-            <option value="pending">Payment Not Approved</option>
+            <option value="not-approve">Payment Not Approved</option>
+            <option value="payment-pending">Payment Pending</option>
             <option value="waiting-process">Waiting for Process</option>
             <option value="receive-order">Receive Order</option>
             <option value="order-completed">Order Completed</option>
@@ -192,35 +193,37 @@ export function ManageOrders() {
                 <th className="px-6 py-3 text-left">Status</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order, index) => (
-                <tr
-                  key={index}
-                  className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
-                  onClick={() => handleRowClick(order.orderId)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getShippingOptionDisplay(order.shippingOption)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDateTime(order.dateOrdered)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDateTime(order.dateReceived)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.paymentStatus === 'N' ? (
-                      <span className="text-sm">Payment Not Approved</span>
-                    ) : (
-                      order.status
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOrders.map((order, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                    onClick={() => handleRowClick(order.orderId)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {getShippingOptionDisplay(order.shippingOption)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDateTime(order.dateOrdered)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDateTime(order.dateReceived)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.paymentStatus === 'N' ? (
+                        <span className="text-sm">Payment Not Approved</span>
+                      ) : order.paymentStatus === 'P' ? (
+                        <span className="text-sm">Pending</span>  // Display "Pending" for 'P'
+                      ) : (
+                        order.status
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
           </table>
         </div>
       )}

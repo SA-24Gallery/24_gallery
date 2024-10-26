@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       WHERE 1=1
     `;
 
-    if (filter === 'pending') {
+    if (filter === 'not-approve') {
       sql += ` AND o.Payment_status = 'N'`;
     } else if (filter === 'waiting-process') {
       sql += ` AND o.Payment_status = 'A'
@@ -49,7 +49,9 @@ export async function GET(request: Request) {
                  FROM LatestCompletedStatus lcs
                  WHERE lcs.Order_id = o.Order_id
                )`;
-    } else if (filter === 'canceled') {  // เพิ่มตัวกรอง Canceled
+    } else if (filter === 'payment-pending') { 
+      sql += ` AND o.Payment_status = 'P'`;
+    } else if (filter === 'canceled') {
       sql += ` AND EXISTS (
                  SELECT 1
                  FROM Status s
