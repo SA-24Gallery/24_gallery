@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import SortButton from './sort-button';
-import { notFound } from 'next/navigation';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 
 interface Order {
   orderId: string;
@@ -13,28 +12,35 @@ interface Order {
   dateOrdered: string;
   dateReceived: string;
   status: string;
+  paymentStatus: string;
 }
 
 export function ManageOrders() {
-  const [sortCriteria, setSortCriteria] = useState('orderId');
-  const [sortOrder, setSortOrder] = useState('asc');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filter, setFilter] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('orderId');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
   const router = useRouter();
 
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders');
+        const response = await fetch(`/api/status${filter ? `?filter=${filter}` : ''}`);
         if (!response.ok) {
+          if (response.status === 404) {
+            setOrders([]);
+            return;
+          }
           throw new Error(`Failed to fetch orders: ${response.statusText}`);
         }
-        const data: Order[] = await response.json();
-        setOrders(data);
+        const data = await response.json();
+        setOrders(Array.isArray(data) ? data : []);
       } catch (error: any) {
-        console.error('Error fetching orders:', error);
+        console.error('Fetch error:', error);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -42,43 +48,21 @@ export function ManageOrders() {
     }
 
     fetchOrders();
-  }, []);
-
-  const uniqueOrders = (orders: Order[]): Order[] => {
-    const seen = new Set();
-    return orders.filter(order => {
-      if (seen.has(order.orderId)) {
-        return false;
-      }
-      seen.add(order.orderId);
-      return true;
-    });
-  };
-
-  const filteredOrders = uniqueOrders(orders).filter(order =>
-    order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortOrders = (a: Order, b: Order) => {
-    let comparison = 0;
-
-    if (sortCriteria === 'orderId') {
-      comparison = a.orderId.localeCompare(b.orderId);
-    } else if (sortCriteria === 'dateOrdered') {
-      comparison = new Date(a.dateOrdered).getTime() - new Date(b.dateOrdered).getTime();
-    } else if (sortCriteria === 'dateReceived') {
-      comparison = new Date(a.dateReceived).getTime() - new Date(b.dateReceived).getTime();
-    }
-
-    return sortOrder === 'asc' ? comparison : -comparison;
-  };
-
-  const sortedOrders = [...filteredOrders].sort(sortOrders);
+  }, [filter]);
 
   const handleRowClick = (orderId: string) => {
     router.push(`/manage-order-details?orderId=${orderId}`);
+  };
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFilter(e.target.value);
+    setLoading(true);
+  };
+
+  const handleSort = (field: string) => {
+    const newSortOrder = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortOrder(newSortOrder);
   };
 
   const getShippingOptionDisplay = (option: string) => {
@@ -87,11 +71,9 @@ export function ManageOrders() {
     return 'Unknown';
   };
 
-  const formatDateTime = (dateString: string): string => {
+  const formatDateTime = (dateString: string | null): string => {
     if (!dateString) return "-";
-    
     const date = new Date(dateString);
-    
     return date.toLocaleString('en-GB', {
       day: '2-digit',
       month: 'long',
@@ -102,22 +84,56 @@ export function ManageOrders() {
     });
   };
 
+
+  const sortedOrders = [...orders].sort((a, b) => {
+    const valueA = a[sortField as keyof Order];
+    const valueB = b[sortField as keyof Order];
+
+    if (typeof valueA === 'string' && typeof valueB === 'string') {
+      return sortOrder === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+    } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+      return sortOrder === 'asc' ? valueA - valueB : valueB - valueA;
+    } else {
+      return 0;
+    }
+  });
+
+
+  const filteredOrders = sortedOrders.filter((order) => {
+    const isMatchSearchTerm =
+      order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const isInDateRange = dateRange.from && dateRange.to
+      ? new Date(order.dateOrdered) >= dateRange.from && new Date(order.dateOrdered) <= dateRange.to
+      : dateRange.from
+      ? new Date(order.dateOrdered).toDateString() === new Date(dateRange.from).toDateString()
+      : true;
+
+    return isMatchSearchTerm && isInDateRange;
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <span className="ml-4 text-lg text-gray-600">Loading orders...</span>
+        <span className="text-lg text-gray-600">Loading orders...</span>
       </div>
     );
   }
 
   if (error) {
-    notFound(); // Display the error page if there's an error
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    );
   }
 
   return (
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
       <div className="flex justify-between items-center mb-6">
-        <div className="w-[1316px]">
+        <div className="w-[70%]">
           <input
             type="text"
             value={searchTerm}
@@ -126,71 +142,88 @@ export function ManageOrders() {
             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="ml-4 flex items-center space-x-4">
-          <SortButton onSort={(criteria, order) => { setSortCriteria(criteria); setSortOrder(order); }} />  {/* Pass sorting callback */}
+        <div className="ml-4">
+          <select
+            value={filter}
+            onChange={handleFilterChange}
+            className="p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">All Orders</option>
+            <option value="pending">Payment Not Approved</option>
+            <option value="waiting-process">Waiting for Process</option>
+            <option value="receive-order">Receive Order</option>
+            <option value="order-completed">Order Completed</option>
+            <option value="shipped">Shipped</option>
+            <option value="canceled">Canceled</option>
+          </select>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-lg shadow-sm">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Order ID#
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Customer
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Delivery Option
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date Ordered
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date Received
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedOrders.map((order, index) => (
-              <tr
-                key={index}
-                className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
-                onClick={() => handleRowClick(order.orderId)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleRowClick(order.orderId);
-                  }
-                }}
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {getShippingOptionDisplay(order.shippingOption)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDateTime(order.dateOrdered)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDateTime(order.dateReceived)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.status}</td>
+      <DatePickerWithRange
+        className="mb-6"
+        onSelect={(range: { from: Date | null; to: Date | null }) => setDateRange(range)}
+      />
+
+      {filteredOrders.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          No orders found
+        </div>
+      ) : (
+        <div className="overflow-auto rounded-lg shadow-sm">
+          <table className="min-w-full table-auto">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('orderId')}>
+                  Order ID {sortField === 'orderId' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('customer')}>
+                  Customer {sortField === 'customer' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('email')}>
+                  Email {sortField === 'email' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="px-6 py-3 text-left">Delivery Option</th>
+                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateOrdered')}>
+                  Date Ordered {sortField === 'dateOrdered' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
+                  Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th className="px-6 py-3 text-left">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredOrders.map((order, index) => (
+                <tr
+                  key={index}
+                  className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                  onClick={() => handleRowClick(order.orderId)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {getShippingOptionDisplay(order.shippingOption)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDateTime(order.dateOrdered)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDateTime(order.dateReceived)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.paymentStatus === 'N' ? (
+                      <span className="text-sm">Payment Not Approved</span>
+                    ) : (
+                      order.status
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
