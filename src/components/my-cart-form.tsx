@@ -1,5 +1,3 @@
-// src/components/my-cart-form.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -10,7 +8,6 @@ import ProductItem from "@/components/order-details/product-item";
 export default function MyCartForm() {
     const router = useRouter();
 
-    // State for managing the order
     const [order, setOrder] = useState<{
         order_id: string;
         customer_name: string;
@@ -24,17 +21,15 @@ export default function MyCartForm() {
 
     const [loading, setLoading] = useState(true);
     const [shippingOption, setShippingOption] = useState("");
+    const [note, setNote] = useState("");
     const shippingCost = shippingOption === "ThailandPost" ? 50 : 0;
 
-    // Fetch order data from the API when the component mounts
     useEffect(() => {
         const fetchOrderData = async () => {
             try {
-                const response = await fetch('/api/orders?payment_status=N&order_date_null=true', {
+                const response = await fetch('/api/orders?order_date_null=true', {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                 });
 
@@ -46,7 +41,7 @@ export default function MyCartForm() {
 
                 const data = await response.json();
                 if (data && data.length > 0) {
-                    const orderData = data[0]; // Assuming you want to display the first unpaid order
+                    const orderData = data[0];
                     setOrder({
                         order_id: orderData.orderId,
                         customer_name: orderData.customer,
@@ -56,14 +51,14 @@ export default function MyCartForm() {
                         received_date: orderData.dateReceived || "",
                         payment_status: orderData.paymentStatus || 'N',
                         products: orderData.products.map((product: any) => ({
-                            product_id: product.productId, // Include product_id
+                            product_id: product.productId,
                             album_name: product.albumName,
                             size: product.size,
                             paper_type: product.paperType,
                             printing_format: product.printingFormat,
                             product_qty: product.quantity,
                             price_per_unit: product.price / product.quantity,
-                            folderPath: product.folderPath, // Include folderPath
+                            folderPath: product.folderPath,
                         })),
                     });
                 } else {
@@ -80,11 +75,29 @@ export default function MyCartForm() {
         fetchOrderData();
     }, []);
 
-    const handlePayment = () => {
+    const handlePayment = async () => {
         if (order && order.products.length > 0) {
-            router.push(`/payment?orderId=${order.order_id}`);
+            try {
+                await fetch('/api/orders', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        orderId: order.order_id,
+                        shippingOption,
+                        note,
+                        payment_status: 'P',     
+                        order_date: new Date(),
+                    }),
+                });
+    
+                router.push(`/payment?orderId=${order.order_id}`);
+            } catch (err) {
+                console.error('Error updating order:', err);
+            }
         }
-    };
+    };    
+    
 
     const handleRemoveProduct = async (index: number) => {
         if (!order) return;
@@ -93,21 +106,16 @@ export default function MyCartForm() {
         const updatedProducts = order.products.filter((_, i) => i !== index);
 
         try {
-            // Send DELETE request to remove the product
             const response = await fetch(`/api/orders?orderId=${order.order_id}&productId=${productToRemove.product_id}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
             });
 
             if (!response.ok) {
                 console.error('Failed to remove product');
             } else {
-                // Update the local state
                 if (updatedProducts.length === 0) {
-                    // If no products left, set order to null
                     setOrder(null);
                 } else {
                     setOrder({ ...order, products: updatedProducts });
@@ -134,7 +142,6 @@ export default function MyCartForm() {
     return (
         <div className="w-full flex justify-center">
             <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-lg shadow-md">
-                {/* Left Section */}
                 <div className="flex-1 bg-white p-6 rounded-lg">
                     {order ? (
                         <>
@@ -172,7 +179,12 @@ export default function MyCartForm() {
                             </div>
                             <div className="mb-4">
                                 <h3 className="font-bold">Notes</h3>
-                                <textarea className="w-full p-2 border border-gray-300 rounded-md" rows={3}></textarea>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-md"
+                                    rows={3}
+                                ></textarea>
                             </div>
                         </>
                     ) : (
@@ -180,13 +192,11 @@ export default function MyCartForm() {
                     )}
                 </div>
 
-                {/* Right Section */}
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col justify-between">
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
                         {order ? (
                             <>
-                                {/* Payment Status Display */}
                                 <p className="mb-2">
                                     Payment status: {order.payment_status === 'N' ? 'Not Approved' : 'Paid'}
                                 </p>
@@ -204,7 +214,7 @@ export default function MyCartForm() {
                                                         printing_format={product.printing_format}
                                                         product_qty={product.product_qty}
                                                         price_per_unit={product.price_per_unit}
-                                                        folderPath={product.folderPath} // Pass folderPath
+                                                        folderPath={product.folderPath}
                                                     />
                                                     <button
                                                         onClick={() => handleRemoveProduct(index)}

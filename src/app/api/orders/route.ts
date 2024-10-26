@@ -465,32 +465,58 @@ export async function GET(request: Request) {
   }
 }
 
-// Handler for PUT requests to update order status
+// Handler for PUT requests to update order status and details
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== 'A') {
+    if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { orderId, status, receivedDate, trackingNumber } = body;  // เพิ่ม trackingNumber
+    const { orderId, status, receivedDate, trackingNumber, shippingOption, note, payment_status, order_date } = body;
 
-    // Update order status and tracking number
+    // Ensure user has permission to update this order
+    if (session.user.role !== 'A') {
+      const orderRows = await query<RowDataPacket[]>(
+        `SELECT email FROM Orders WHERE Order_id = ?`,
+        [orderId]
+      );
+      
+      if (!orderRows.length || orderRows[0].email !== session.user.email) {
+        return NextResponse.json({ error: 'Unauthorized to modify this order' }, { status: 403 });
+      }
+    }
+
+    // Update order with new details including status, tracking, shipping, note, and payment status
     const updateOrderSql = `
       UPDATE Orders 
       SET Received_date = ?,
-          Tracking_number = ?
+          Tracking_number = ?,
+          Shipping_option = ?,
+          Note = ?,
+          Payment_status = ?,
+          Order_date = ?
       WHERE Order_id = ?
     `;
-    await query<ResultSetHeader>(updateOrderSql, [receivedDate, trackingNumber, orderId]);
+    await query<ResultSetHeader>(updateOrderSql, [
+      receivedDate,
+      trackingNumber,
+      shippingOption,
+      note,
+      payment_status,
+      order_date,
+      orderId
+    ]);
 
-    // Insert new status
-    const insertStatusSql = `
-      INSERT INTO Status (Order_id, Status_name, Status_date)
-      VALUES (?, ?, NOW())
-    `;
-    await query<ResultSetHeader>(insertStatusSql, [orderId, status]);
+    // Insert new status 
+    if (status) {
+      const insertStatusSql = `
+        INSERT INTO Status (Order_id, Status_name, Status_date)
+        VALUES (?, ?, NOW())
+      `;
+      await query<ResultSetHeader>(insertStatusSql, [orderId, status]);
+    }
 
     return NextResponse.json(
       { success: true, message: 'Order updated successfully' },
