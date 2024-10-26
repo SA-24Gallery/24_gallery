@@ -1,56 +1,66 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import SortButton from './sort-button'; // Import the SortButton
+import { useRouter } from 'next/navigation';
+import SortButton from './sort-button';
 import { notFound } from 'next/navigation';
 
 interface Order {
   orderId: string;
   customer: string;
   email: string;
-  delivery: string;
+  shippingOption: string;
   dateOrdered: string;
   dateReceived: string;
   status: string;
 }
 
 export function ManageOrders() {
-  const [sortCriteria, setSortCriteria] = useState('orderId'); // Default sorting by orderId
-  const [sortOrder, setSortOrder] = useState('asc'); // Default sorting order is ascending
-  const [orders, setOrders] = useState<Order[]>([]); // State to hold the fetched orders with proper typing
-  const [loading, setLoading] = useState(true); // State to show a loading spinner or message
-  const [error, setError] = useState<string | null>(null); // Error state to catch any errors
-  const [searchTerm, setSearchTerm] = useState(''); // State to manage search
+  const [sortCriteria, setSortCriteria] = useState('orderId');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
 
-  // Fetch the orders from the API route when the component mounts
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders'); // Call the API route
+        const response = await fetch('/api/orders');
         if (!response.ok) {
           throw new Error(`Failed to fetch orders: ${response.statusText}`);
         }
-        const data: Order[] = await response.json(); // Parse the JSON response
-        setOrders(data); // Set the fetched orders
+        const data: Order[] = await response.json();
+        setOrders(data);
       } catch (error: any) {
         console.error('Error fetching orders:', error);
-        setError(error.message); // Set the error message
+        setError(error.message);
       } finally {
-        setLoading(false); // Stop the loading spinner once data is fetched
+        setLoading(false);
       }
     }
 
     fetchOrders();
   }, []);
 
-  // Function to filter the orders based on search input
-  const filteredOrders = orders.filter(order =>
+  const uniqueOrders = (orders: Order[]): Order[] => {
+    const seen = new Set();
+    return orders.filter(order => {
+      if (seen.has(order.orderId)) {
+        return false;
+      }
+      seen.add(order.orderId);
+      return true;
+    });
+  };
+
+  const filteredOrders = uniqueOrders(orders).filter(order =>
     order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Function to sort the orders based on the selected criteria and sort order
   const sortOrders = (a: Order, b: Order) => {
     let comparison = 0;
 
@@ -62,10 +72,35 @@ export function ManageOrders() {
       comparison = new Date(a.dateReceived).getTime() - new Date(b.dateReceived).getTime();
     }
 
-    return sortOrder === 'asc' ? comparison : -comparison; // Adjust sorting based on order
+    return sortOrder === 'asc' ? comparison : -comparison;
   };
 
   const sortedOrders = [...filteredOrders].sort(sortOrders);
+
+  const handleRowClick = (orderId: string) => {
+    router.push(`/orders/${orderId}`);
+  };
+
+  const getShippingOptionDisplay = (option: string) => {
+    if (option === 'D') return 'Delivery';
+    if (option === 'P') return 'Pick Up';
+    return 'Unknown';
+  };
+
+  const formatDateTime = (dateString: string): string => {
+    if (!dateString) return "-";
+    
+    const date = new Date(dateString);
+    
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
 
   if (loading) {
     return (
@@ -81,7 +116,6 @@ export function ManageOrders() {
 
   return (
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
-      {/* Search and Buttons */}
       <div className="flex justify-between items-center mb-6">
         <div className="w-[1316px]">
           <input
@@ -97,7 +131,6 @@ export function ManageOrders() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-auto rounded-lg shadow-sm">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-100">
@@ -127,13 +160,31 @@ export function ManageOrders() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedOrders.map((order, index) => (
-              <tr key={index} className="hover:bg-gray-100">
+              <tr
+                key={index}
+                className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                onClick={() => handleRowClick(order.orderId)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleRowClick(order.orderId);
+                  }
+                }}
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.delivery}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.dateOrdered}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.dateReceived}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {getShippingOptionDisplay(order.shippingOption)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {formatDateTime(order.dateOrdered)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {formatDateTime(order.dateReceived)}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.status}</td>
               </tr>
             ))}
