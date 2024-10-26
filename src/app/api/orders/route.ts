@@ -1,3 +1,5 @@
+// src/app/api/orders/route.ts
+
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
@@ -61,6 +63,7 @@ interface Order {
   dateReceived: Date | null;
   paymentStatus: string | null;
   note: string | null;
+  trackingNumber: string | null;
   products: Product[];
   status: string | null;
 }
@@ -307,80 +310,82 @@ export async function GET(request: Request) {
       let sql = '';
       const queryParams: any[] = [];
 
-      if (session.user.role === 'A') {
-        // Admin: Fetch all orders
-        sql = `
-          SELECT 
-            o.Order_id AS orderId,
-            u.User_name AS customer,
-            u.Phone_number AS phone,
-            p.Product_id AS productId,
-            p.Album_name AS albumName,
-            p.Url AS folderPath,
-            p.Size AS size,
-            p.Paper_type AS paperType,
-            p.Printing_format AS printingFormat,
-            p.Product_qty AS productQty,
-            p.Price AS totalPrice,
-            o.Email AS email,
-            o.Shipping_option AS shippingOption,
-            o.Payment_status AS paymentStatus,
-            o.Note AS note,
-            o.Order_date AS dateOrdered,
-            o.Received_date AS dateReceived,
-            s.Status_name AS status
-          FROM Orders o
-          LEFT JOIN Users u ON o.Email = u.Email
-          LEFT JOIN Product p ON o.Order_id = p.Order_id
-          LEFT JOIN (
-            SELECT s1.Order_id, s1.Status_name
-            FROM Status s1
-            WHERE s1.Status_date = (
-              SELECT MAX(s2.Status_date)
-              FROM Status s2
-              WHERE s2.Order_id = s1.Order_id
-            )
-          ) s ON o.Order_id = s.Order_id
-          WHERE 1=1
-        `;
-      } else {
-        // User: Fetch only their orders
-        sql = `
-          SELECT 
-            o.Order_id AS orderId,
-            u.User_name AS customer,
-            u.Phone_number AS phone,
-            p.Product_id AS productId,
-            p.Album_name AS albumName,
-            p.Url AS folderPath,
-            p.Size AS size,
-            p.Paper_type AS paperType,
-            p.Printing_format AS printingFormat,
-            p.Product_qty AS productQty,
-            p.Price AS totalPrice,
-            o.Email AS email,
-            o.Shipping_option AS shippingOption,
-            o.Payment_status AS paymentStatus,
-            o.Note AS note,
-            o.Order_date AS dateOrdered,
-            o.Received_date AS dateReceived,
-            s.Status_name AS status
-          FROM Orders o
-          LEFT JOIN Users u ON o.Email = u.Email
-          LEFT JOIN Product p ON o.Order_id = p.Order_id
-          LEFT JOIN (
-            SELECT s1.Order_id, s1.Status_name
-            FROM Status s1
-            WHERE s1.Status_date = (
-              SELECT MAX(s2.Status_date)
-              FROM Status s2
-              WHERE s2.Order_id = s1.Order_id
-            )
-          ) s ON o.Order_id = s.Order_id
-          WHERE o.Email = ?
-        `;
-        queryParams.push(session.user.email);
-      }
+    if (session.user.role === 'A') {
+      // Admin: Fetch all orders
+      sql = `
+        SELECT 
+          o.Order_id AS orderId,
+          u.User_name AS customer,
+          u.Phone_number AS phone,
+          p.Product_id AS productId,
+          p.Album_name AS albumName,
+          p.Url AS folderPath,
+          p.Size AS size,
+          p.Paper_type AS paperType,
+          p.Printing_format AS printingFormat,
+          p.Product_qty AS productQty,
+          p.Price AS totalPrice,
+          o.Email AS email,
+          o.Shipping_option AS shippingOption,
+          o.Payment_status AS paymentStatus,
+          o.Note AS note,
+          o.Order_date AS dateOrdered,
+          o.Received_date AS dateReceived,
+          o.Tracking_number AS trackingNumber,
+          s.Status_name AS status
+        FROM Orders o
+        LEFT JOIN Users u ON o.Email = u.Email
+        LEFT JOIN Product p ON o.Order_id = p.Order_id
+        LEFT JOIN (
+          SELECT s1.Order_id, s1.Status_name
+          FROM Status s1
+          WHERE s1.Status_date = (
+            SELECT MAX(s2.Status_date)
+            FROM Status s2
+            WHERE s2.Order_id = s1.Order_id
+          )
+        ) s ON o.Order_id = s.Order_id
+        WHERE 1=1
+      `;
+    } else {
+      // User: Fetch only their orders
+      sql = `
+        SELECT 
+          o.Order_id AS orderId,
+          u.User_name AS customer,
+          u.Phone_number AS phone,
+          p.Product_id AS productId,
+          p.Album_name AS albumName,
+          p.Url AS folderPath,
+          p.Size AS size,
+          p.Paper_type AS paperType,
+          p.Printing_format AS printingFormat,
+          p.Product_qty AS productQty,
+          p.Price AS totalPrice,
+          o.Email AS email,
+          o.Shipping_option AS shippingOption,
+          o.Payment_status AS paymentStatus,
+          o.Note AS note,
+          o.Order_date AS dateOrdered,
+          o.Received_date AS dateReceived,
+          o.Tracking_number AS trackingNumber,
+          s.Status_name AS status
+        FROM Orders o
+        LEFT JOIN Users u ON o.Email = u.Email
+        LEFT JOIN Product p ON o.Order_id = p.Order_id
+        LEFT JOIN (
+          SELECT s1.Order_id, s1.Status_name
+          FROM Status s1
+          WHERE s1.Status_date = (
+            SELECT MAX(s2.Status_date)
+            FROM Status s2
+            WHERE s2.Order_id = s1.Order_id
+          )
+        ) s ON o.Order_id = s.Order_id
+        WHERE o.Email = ?
+      `;
+      queryParams.push(session.user.email);
+    }
 
       if (orderId) {
         sql += ` AND o.Order_id = ?`;
@@ -413,22 +418,23 @@ export async function GET(request: Request) {
         // Find or create the current order in transformedOrders
         let currentOrder = transformedOrders.find((o) => o.orderId === order.orderId);
 
-        if (!currentOrder) {
-          currentOrder = {
-            orderId: order.orderId,
-            customer: order.customer,
-            phone: order.phone,
-            email: order.email,
-            shippingOption: order.shippingOption,
-            dateOrdered: order.dateOrdered,
-            dateReceived: order.dateReceived,
-            paymentStatus: order.paymentStatus,
-            note: order.note,
-            products: [],
-            status: order.status,
-          };
-          transformedOrders.push(currentOrder);
-        }
+      if (!currentOrder) {
+        currentOrder = {
+          orderId: order.orderId,
+          customer: order.customer,
+          phone: order.phone,
+          email: order.email,
+          shippingOption: order.shippingOption,
+          dateOrdered: order.dateOrdered,
+          dateReceived: order.dateReceived,
+          paymentStatus: order.paymentStatus,
+          note: order.note,
+          trackingNumber: order.trackingNumber,
+          products: [],
+          status: order.status,
+        };
+        transformedOrders.push(currentOrder);
+      }
 
         const product: Product = {
           productId: order.productId,
@@ -468,15 +474,16 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { orderId, status, receivedDate } = body;
+    const { orderId, status, receivedDate, trackingNumber } = body;  // เพิ่ม trackingNumber
 
-    // Update order status
+    // Update order status and tracking number
     const updateOrderSql = `
       UPDATE Orders 
-      SET Received_date = ?
+      SET Received_date = ?,
+          Tracking_number = ?
       WHERE Order_id = ?
     `;
-    await query<ResultSetHeader>(updateOrderSql, [receivedDate, orderId]);
+    await query<ResultSetHeader>(updateOrderSql, [receivedDate, trackingNumber, orderId]);
 
     // Insert new status
     const insertStatusSql = `
