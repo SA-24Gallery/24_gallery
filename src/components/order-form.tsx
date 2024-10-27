@@ -50,6 +50,14 @@ const OrderForm = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
+
+      if (selectedFiles.length > 20) {
+        alert('Only 20 images allowed. Please reduce the number of files.');
+        e.target.value = '';
+        setFiles([]);
+        return;
+      }
+
       if (!validateFiles(selectedFiles)) {
         alert('Please upload only image files (JPEG, PNG, GIF, WEBP)');
         return;
