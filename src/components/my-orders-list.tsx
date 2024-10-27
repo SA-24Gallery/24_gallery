@@ -1,4 +1,5 @@
 "use client";
+
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
@@ -21,6 +22,9 @@ export function MyOrdersList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'orderId' | 'dateOrdered' | 'dateReceived'>('orderId');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 20;
+
   const router = useRouter();
 
   const fetchOrders = async () => {
@@ -43,6 +47,11 @@ export function MyOrdersList() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const deduplicateOrders = (orders: Order[]): Order[] => {
     const orderMap: { [orderId: string]: Order } = {};
@@ -83,40 +92,18 @@ export function MyOrdersList() {
     router.push(`/my-order-details?orderId=${orderId}`);
   };
 
-  const handleStatusUpdate = async (orderId: string) => {
-    try {
-      const response = await fetch(`/api/show-status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ orderId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update order status: ${response.statusText}`);
-      }
-
-      fetchOrders();
-    } catch (error) {
-      console.error('Error updating order status:', error);
-    }
-  };
-
   const getShippingOptionDisplay = (option: string) => {
     if (option === 'D') return 'Delivery';
     if (option === 'P') return 'Pick Up';
     return 'Unknown';
   };
 
-const getStatusDisplay = (order: Order) => {
-    // ตรวจสอบสถานะการชำระเงินก่อน
+  const getStatusDisplay = (order: Order) => {
     if (order.paymentStatus === 'N') {
       return 'Payment Not Approved';
     } else if (order.paymentStatus === 'P') {
       return 'Payment Pending';
     } else if (order.paymentStatus === 'A') {
-      // ถ้าชำระเงินแล้ว ตรวจสอบ status
       if (order.status === 'Order completed') {
         return 'Order completed';
       } else if (order.status === 'Receive order') {
@@ -128,29 +115,86 @@ const getStatusDisplay = (order: Order) => {
       } else if (!order.status || order.status.trim() === '' || order.status === '0') {
         return 'Waiting for process';
       }
-      // ถ้ามีค่า status อื่นๆ ให้แสดงค่านั้นเลย
       return order.status;
     }
     return 'Unknown Status';
   };
 
-
   const formatDate = (dateString: string): string => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
-    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
+  // Pagination component
+  const Pagination = () => {
+    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+    return (
+      <div className="flex justify-center items-center gap-4 mt-6 mb-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className={`px-4 py-2 rounded-md ${
+            currentPage === 1
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          Previous
+        </button>
+        
+        <span className="text-gray-600">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className={`px-4 py-2 rounded-md ${
+            currentPage === totalPages || totalPages === 0
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          Next
+        </button>
+      </div>
+    );
   };
 
   if (loading) {
-    return <div>Loading your orders...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <span className="text-lg text-gray-600">Loading your orders...</span>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error fetching your orders: {error}</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-red-500">Error fetching your orders: {error}</div>
+      </div>
+    );
   }
 
+  // Filter and sort orders
   const filteredOrders = orders
     .filter(order => order.orderId.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort(sortOrders);
+
+  // Pagination calculations
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
 
   return (
     <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
@@ -164,40 +208,64 @@ const getStatusDisplay = (order: Order) => {
         />
       </div>
 
-      <div className="overflow-auto rounded-lg shadow-sm">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('orderId')}>
-                Order ID {sortField === 'orderId' && (sortOrder === 'asc' ? '▲' : '▼')}
-              </th>
-              <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateOrdered')}>
-                Date Ordered {sortField === 'dateOrdered' && (sortOrder === 'asc' ? '▲' : '▼')}
-              </th>
-              <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
-                Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
-              </th>
-              <th className="px-6 py-3 text-left">Delivery Option</th>
-              <th className="px-6 py-3 text-left">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredOrders.map((order, index) => (
-              <tr
-                key={index}
-                className="hover:bg-gray-100 cursor-pointer"
-                onClick={() => handleRowClick(order.orderId)}
-              >
-                <td className="px-6 py-4">{order.orderId}</td>
-                <td className="px-6 py-4">{formatDate(order.dateOrdered)}</td>
-                <td className="px-6 py-4">{order.paymentStatus === 'A' ? formatDate(order.dateReceived) : '-'}</td>
-                <td className="px-6 py-4">{getShippingOptionDisplay(order.shippingOption)}</td>
-                <td className="px-6 py-4">{getStatusDisplay(order)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {filteredOrders.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          No orders found
+        </div>
+      ) : (
+        <>
+          <div className="overflow-auto rounded-lg shadow-sm">
+            <table className="min-w-full table-auto">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('orderId')}>
+                    Order ID {sortField === 'orderId' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateOrdered')}>
+                    Date Ordered {sortField === 'dateOrdered' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
+                    Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left">Delivery Option</th>
+                  <th className="px-6 py-3 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentOrders.map((order, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+                    onClick={() => handleRowClick(order.orderId)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(order.dateOrdered)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.paymentStatus === 'A' ? formatDate(order.dateReceived) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {getShippingOptionDisplay(order.shippingOption)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {getStatusDisplay(order)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Showing entries info */}
+          <div className="mt-4 text-gray-600 text-sm">
+            Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
+          </div>
+
+          {/* Show pagination only if needed */}
+          {filteredOrders.length > ordersPerPage && <Pagination />}
+        </>
+      )}
     </div>
   );
 }
