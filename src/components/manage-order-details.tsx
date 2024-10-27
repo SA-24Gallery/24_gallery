@@ -209,8 +209,9 @@ export default function ManageOrderDetails() {
                 dateReceived: currentDateTime
             });
 
-            // Refresh data to ensure we have the latest state
-            await fetchOrderDetails();
+            await fetchOrderDetails();   // รีเฟรชข้อมูลออเดอร์
+            await fetchStatusTimeline(); // รีเฟรชข้อมูลไทม์ไลน์
+            
         } catch (error) {
             console.error('Error updating payment status:', error);
         }
@@ -255,8 +256,21 @@ export default function ManageOrderDetails() {
         return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
 
+
+
+    useEffect(() => {
+        if (orderId) {
+            setLoading(true); // เปิด loading ตอนเริ่มดึงข้อมูล
+            fetchOrderDetails();
+            fetchStatusTimeline();
+        } else {
+            setLoading(false);
+            setError("No order ID provided.");
+        }
+    }, [orderId]);
+
     if (loading) {
-        return <div>Loading order details...</div>;
+        return <div>Loading order details...</div>; // แสดงผลขณะรอข้อมูล
     }
 
     if (error) {
@@ -305,44 +319,45 @@ export default function ManageOrderDetails() {
                         <OrderTimeline steps={steps} />
 
                         <div className="flex space-x-4 mt-4">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant="default"
-                                        disabled={order.payment_status !== "A" || isAllStatusesCompleted()} 
-                                    >
-                                        {order.payment_status === "A" && !isAllStatusesCompleted()
-                                            ? "Update"
-                                            : isAllStatusesCompleted()
-                                            ? "All statuses are completed"
-                                            : "Cannot update until payment is approved"
-                                        }
-                                    </Button>
-                                </AlertDialogTrigger>
-                                {order.payment_status === "A" && !isAllStatusesCompleted() && (
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to update the status? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel asChild>
-                                                <Button variant="secondary">Cancel</Button>
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction asChild>
-                                                <Button onClick={handleStatusUpdate} variant="default">
-                                                    Confirm
-                                                </Button>
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                )}
-                            </AlertDialog>
-                        </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="default"
+                                    disabled={order.payment_status !== "A" || isAllStatusesCompleted()} // ปิดการใช้งานปุ่มถ้าชำระเงินยังไม่ Approve หรือสถานะครบแล้ว
+                                >
+                                    {order.payment_status === "A" && !isAllStatusesCompleted()
+                                        ? "Update" // แสดงปุ่มอัปเดตถ้าสถานะการชำระเงินเป็น A และสถานะยังไม่ครบ
+                                        : isAllStatusesCompleted()
+                                        ? "All statuses are completed" // ถ้าสถานะครบแล้ว จะแสดงว่าครบแล้ว
+                                        : "Cannot update until payment is approved" // ถ้าชำระเงินยังไม่ approve
+                                    }
+                                </Button>
+                            </AlertDialogTrigger>
+                            {order.payment_status === "A" && !isAllStatusesCompleted() && (
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to update the status? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel asChild>
+                                            <Button variant="secondary">Cancel</Button>
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction asChild>
+                                            <Button onClick={handleStatusUpdate} variant="default">
+                                                Confirm
+                                            </Button>
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            )}
+                        </AlertDialog>
                     </div>
-                </div>
+                    </div>
+                    </div>
+
 
                 {/* Right Section */}
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
