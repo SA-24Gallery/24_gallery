@@ -36,7 +36,7 @@ export default function Contact() {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/oder" className="text-gray-500 hover:text-gray-700">
+                                <Link href="/order" className="text-gray-500 hover:text-gray-700">
                                     Order Page
                                 </Link>
                             </li>
