@@ -3,10 +3,10 @@
 import React from "react";
 
 interface TimelineStep {
-    title: string;
-    date: string;
-    time: string;
-    completed: boolean;
+  title: string;
+  date: string | null;  // Allow null for date
+  time: string | null;  // Allow null for time
+  completed: boolean;
 }
 
 interface OrderTimelineProps {
@@ -55,11 +55,8 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({ steps }) => {
             </div>
             <div className="text-center mt-2">
               <p className="text-sm font-medium">{step.title}</p>
-              {step.date && step.time && (
-                <p className="text-xs text-gray-500">
-                  {step.date} {step.time}
-                </p>
-              )}
+              {step.date && <p className="text-xs text-gray-500">{step.date}</p>}
+              {step.time && <p className="text-xs text-gray-500">{step.time}</p>}
             </div>
           </div>
           {index < steps.length - 1 && (
@@ -79,5 +76,6 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({ steps }) => {
     </div>
   );
 };
+
 
 export default OrderTimeline;

@@ -111,13 +111,14 @@ export default function MyOrderDetailsPage() {
 
           {/* Order Timeline Component */}
           <OrderTimeline
-            steps={statuses.map((status) => ({
-              title: status.statusName,
-              date: new Date(status.statusDate).toLocaleDateString(),
-              time: new Date(status.statusDate).toLocaleTimeString(),
-              completed: status.isCompleted === 1,
-            }))}
-          />
+              steps={statuses.map((status) => ({
+                title: status.statusName,
+                date: status.statusDate ? new Date(status.statusDate).toLocaleDateString() : null, // Check if statusDate exists
+                time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString() : null, // Check if statusDate exists
+                completed: status.isCompleted === 1,
+              }))}
+            />
+
         </div>
 
         {/* Right Section */}

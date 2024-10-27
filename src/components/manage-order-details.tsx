@@ -103,50 +103,67 @@ export default function ManageOrderDetails() {
         }
     }, [orderId]);
 
-    const handleStatusUpdate = async () => {
-        if (!order) return;
 
-        try {
-            const response = await fetch(`/api/orders`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    orderId: order.orderId,
-                    status: steps[currentStatusIndex + 1]?.title,
-                    // เพิ่มข้อมูลอื่นๆ ที่มีอยู่เดิม
-                    shippingOption: order.shippingOption,
-                    note: order.notes,
-                    receivedDate: order.dateReceived,
-                    trackingNumber: order.trackingNumber,
-                    payment_status: order.payment_status,
-                    order_date: order.dateOrdered
-                }),
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to update status: ${response.statusText}`);
-            }
-
-            if (currentStatusIndex < steps.length - 1) {
-                const newSteps = steps.map((step, index) => {
-                    if (index <= currentStatusIndex + 1) {
-                        return { ...step, completed: true };
-                    }
-                    return step;
-                });
-                setSteps(newSteps);
-                setCurrentStatusIndex(currentStatusIndex + 1);
-            }
-
-            // Refresh data
-            await fetchOrderDetails();
-        } catch (error) {
-            console.error('Error updating status:', error);
+const fetchStatusTimeline = async () => {
+    try {
+        const statusResponse = await fetch(`/api/show-status?orderId=${orderId}`);
+        if (statusResponse.ok) {
+            const statuses = await statusResponse.json();
+            const formattedSteps = statuses.map((status: any) => ({
+                title: status.statusName,
+                date: status.statusDate ? new Date(status.statusDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show date separately
+                time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show time separately
+                completed: status.isCompleted === 1
+            }));
+            setSteps(formattedSteps);
         }
-    };
+    } catch (error) {
+        console.error('Error fetching status timeline:', error);
+    }
+};
+
+
+// ปรับ useEffect
+useEffect(() => {
+    if (orderId) {
+        fetchOrderDetails();
+        fetchStatusTimeline(); // เพิ่มการเรียก status
+    } else {
+        setLoading(false);
+        setError("No order ID provided.");
+    }
+}, [orderId]);
+
+// ปรับ handleStatusUpdate
+const handleStatusUpdate = async () => {
+    if (!order) return;
+
+    try {
+        const response = await fetch('/api/show-status', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                orderId: order.orderId
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update status: ${response.statusText}`);
+        }
+
+        // Refresh the status timeline after update
+        await fetchStatusTimeline();
+
+    } catch (error) {
+        console.error('Error updating status:', error);
+    }
+};
+
+const isAllStatusesCompleted = (): boolean => {
+    return steps.every((step) => step.completed);
+};
 
     const handlePaymentUpdate = async () => {
         if (!order) return;
