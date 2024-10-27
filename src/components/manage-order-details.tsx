@@ -151,6 +151,8 @@ export default function ManageOrderDetails() {
     const handlePaymentUpdate = async () => {
         if (!order) return;
 
+        const currentDateTime = new Date().toISOString();
+
         try {
             const response = await fetch('/api/orders', {
                 method: 'PUT',
@@ -163,7 +165,7 @@ export default function ManageOrderDetails() {
                     // ส่งข้อมูลอื่นๆ ที่มีอยู่เดิม
                     shippingOption: order.shippingOption,
                     note: order.notes,
-                    receivedDate: order.dateReceived,
+                    receivedDate: currentDateTime,
                     trackingNumber: order.trackingNumber,
                     order_date: order.dateOrdered
                 }),
@@ -177,7 +179,8 @@ export default function ManageOrderDetails() {
             // Update local state temporarily
             setOrder({
                 ...order,
-                payment_status: 'A'
+                payment_status: 'A',
+                dateReceived: currentDateTime
             });
 
             // Refresh data to ensure we have the latest state
@@ -262,7 +265,7 @@ export default function ManageOrderDetails() {
                     </div>
                     <div>
                         <h3 className="font-bold mb-1">Date received</h3>
-                        <p>{order.dateReceived ? formatDate(order.dateReceived) : "N/A"}</p>
+                        <p>{order.dateReceived ? formatDate(order.dateReceived) : "-"}</p>
                     </div>
                     <div>
                         <h3 className="font-bold mb-1">Notes</h3>
