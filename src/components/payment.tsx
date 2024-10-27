@@ -88,7 +88,7 @@ export default function Payment() {
         <img
           src="/images/payment_qr.png"
           alt="QR Code"
-          className="w-[300px] h-[500px] shadow-md"
+          className="w-[390px] h-[650px] shadow-md"
         />
       </div>
 
