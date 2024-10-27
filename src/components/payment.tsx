@@ -6,7 +6,7 @@ export default function Payment() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const totalPrice = searchParams.get('totalPrice');
-  const router = useRouter(); // Initialize useRouter for navigation
+  const router = useRouter();
 
   const [fileUploaded, setFileUploaded] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
@@ -36,7 +36,8 @@ export default function Payment() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('productId', `receipt_${orderId}`);
+      // Changed to use receipts/[orderId] as the path
+      formData.append('productId', `receipts/${orderId}`);
 
       // Upload receipt to API
       const uploadResponse = await fetch('/api/upload', {

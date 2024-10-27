@@ -4,11 +4,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { ResultSetHeader } from 'mysql2/promise';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Initialize S3 client
 const s3Client = new S3Client({
-  region: 'ap-southeast-2',  // Using ap-southeast-2 for Sydney region
+  region: process.env.AWS_REGION, // Using ap-southeast-2 for Sydney region
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
@@ -43,9 +42,9 @@ export async function POST(request: Request) {
       receiptBuffer = Buffer.from(arrayBuffer);
     }
 
-    // Set the S3 key with the correct path format
-    const s3Key = `receipts/receipt_${orderId}`;
-    
+    // Set the S3 key with the correct path format and .jpg extension
+    const s3Key = `receipts/receipt_${orderId}.jpg`;
+
     // Full S3 URL that will be stored in the database
     const s3Url = `https://24-gallery-photos.s3.ap-southeast-2.amazonaws.com/${s3Key}`;
 
@@ -58,7 +57,6 @@ export async function POST(request: Request) {
     });
 
     await s3Client.send(uploadCommand);
-
     console.log("Attempting to update order:", { orderId, s3Url, paymentStatus });
 
     // Update order in the database with the full S3 URL
@@ -67,6 +65,7 @@ export async function POST(request: Request) {
       SET Payment_status = ?, Receipt_pic = ?
       WHERE Order_id = ?
     `;
+
     const result = (await query(updateQuery, [paymentStatus, s3Url, orderId])) as ResultSetHeader;
     console.log("Query result affected rows:", result.affectedRows);
 
@@ -75,8 +74,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Order not found or update failed' }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Order updated successfully',
       receiptUrl: s3Url
     }, { status: 200 });
