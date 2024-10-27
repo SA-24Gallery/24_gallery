@@ -1,11 +1,12 @@
 // src/app/api/upload/route.ts
+
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { console } from "next/dist/compiled/@edge-runtime/primitives";
+import {console} from "next/dist/compiled/@edge-runtime/primitives";
 
-// Initialize S3 Client
+// กำหนดค่า S3 Client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
   credentials: {
@@ -16,7 +17,6 @@ const s3Client = new S3Client({
 
 export async function POST(request: Request) {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -34,36 +34,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'No files provided' }, { status: 400 });
     }
 
-    // Determine folder path based on the productId prefix
-    let folderKey: string;
-    if (productId.startsWith('receipts/')) {
-      // For receipts, use the path as is
-      folderKey = `${productId}/`;
-    } else {
-      // For product photos, maintain the products/ prefix
-      folderKey = `products/${productId}/`;
-    }
+    // สร้าง path สำหรับ folder
+    const folderKey = `products/${productId}/`;
 
-    // Upload each file
+    // อัพโหลดไฟล์แต่ละไฟล์
     const uploadPromises = files.map(async (file, index) => {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Get file extension - only for product photos
-      // For receipts, always use jpg
-      const extension = productId.startsWith('receipts/') 
-        ? 'jpg'  // Force jpg for receipts
-        : (file.name.split('.').pop() || 'jpg');  // Keep original extension for products
+      // ดึงนามสกุลไฟล์
+      const extension = file.name.split('.').pop() || 'jpg';
 
-      // Set filename based on the type
-      const fileName = productId.startsWith('receipts/')
-        ? `receipt_${index + 1}.jpg`  // Always jpg for receipts
-        : `${productId}_${index + 1}.${extension}`;
-
+      // ตั้งชื่อไฟล์ตามรูปแบบ product_id_sequence
+      const fileName = `${productId}_${index + 1}.${extension}`;
       const fileKey = `${folderKey}${fileName}`;
-      console.log(`Uploading file ${fileName} to folder ${folderKey}`);
 
-      // Upload file to S3
+      // อัพโหลดไฟล์ขึ้น S3
       const command = new PutObjectCommand({
         Bucket: process.env.AWS_BUCKET_NAME!,
         Key: fileKey,
@@ -74,14 +60,13 @@ export async function POST(request: Request) {
       await s3Client.send(command);
     });
 
-    // Wait for all uploads to complete
+    // รอให้อัพโหลดทุกไฟล์เสร็จ
     await Promise.all(uploadPromises);
 
-    // Generate S3 folder URL
+    // สร้าง URL ของ folder
     const s3FolderUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${folderKey}`;
-    console.log(s3FolderUrl);
-
-    // Return the folder URL
+    console.log(s3FolderUrl)
+    // ส่งคืน URL ของ folder
     return NextResponse.json({
       success: true,
       message: `Successfully uploaded ${files.length} files`,
@@ -92,8 +77,8 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error uploading files:', error);
     return NextResponse.json(
-      { error: 'Error uploading files', message: error.message },
-      { status: 500 }
+        { error: 'Error uploading files', message: error.message },
+        { status: 500 }
     );
   }
 }

@@ -1,3 +1,5 @@
+// Payment.tsx
+
 "use client";
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -36,11 +38,10 @@ export default function Payment() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      // Changed to use receipts/[orderId] as the path
-      formData.append('productId', `receipts/${orderId}`);
+      formData.append('orderId', orderId); // ส่ง orderId แทน productId
 
-      // Upload receipt to API
-      const uploadResponse = await fetch('/api/upload', {
+      // อัปโหลด receipt ไปยัง API Route ใหม่
+      const uploadResponse = await fetch('/api/upload-receipt', {
         method: 'POST',
         body: formData,
       });
@@ -50,9 +51,9 @@ export default function Payment() {
         throw new Error(errorData.message || 'Failed to upload file');
       }
 
-      const { folderUrl } = await uploadResponse.json();
+      const { fileUrl } = await uploadResponse.json(); // รับ fileUrl จาก API
 
-      // Update order status to 'P' and receipt URL in the database
+      // อัปเดต order status และ receipt URL ในฐานข้อมูล
       const updateResponse = await fetch('/api/update-receipt', {
         method: 'POST',
         headers: {
@@ -60,8 +61,8 @@ export default function Payment() {
         },
         body: JSON.stringify({
           orderId: orderId,
-          receiptUrl: folderUrl,
-          paymentStatus: 'P', // Set payment status to 'Pending'
+          receiptUrl: fileUrl, // ใช้ fileUrl ที่ได้รับจาก API
+          paymentStatus: 'P', // ตั้งค่า payment status เป็น 'Pending'
         }),
       });
 
@@ -69,7 +70,7 @@ export default function Payment() {
         throw new Error('Failed to update order status');
       }
 
-      // Redirect to payment-success page with order ID
+      // เปลี่ยนเส้นทางไปยังหน้า payment-success พร้อมกับ orderId
       router.push(`/payment-success?orderId=${orderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -84,54 +85,54 @@ export default function Payment() {
   }
 
   return (
-    <div className="bg-white p-8 rounded-[30px] max-w-[693px] w-full text-center">
-      <div className="flex justify-center mb-6">
-        <img
-          src="/images/payment_qr.png"
-          alt="QR Code"
-          className="w-[390px] h-[650px] shadow-md"
-        />
-      </div>
-
-      <form onSubmit={handleDoneClick} className="flex flex-col justify-center items-center mb-6 w-full">
-        {/* Display Total Price */}
-        <div className="flex flex-row justify-center items-center gap-2 mb-4">
-          <span className="font-bold text-[16px]">Total price:</span>
-          <span className="font-bold text-[16px]">{totalPrice} Baht</span>
+      <div className="bg-white p-8 rounded-[30px] max-w-[693px] w-full text-center">
+        <div className="flex justify-center mb-6">
+          <img
+              src="/images/payment_qr.png"
+              alt="QR Code"
+              className="w-[390px] h-[650px] shadow-md"
+          />
         </div>
 
-        {/* Upload Receipt Section */}
-        <div className="flex flex-col items-center gap-2 w-full">
-          <div className="flex flex-row justify-center items-center gap-2">
-            <label htmlFor="upload" className="text-[16px] font-medium">
-              Upload receipt:
-            </label>
-            <input
-              type="file"
-              id="upload"
-              name="file"
-              accept="image/*,application/pdf"
-              className="border border-gray-400 py-2 px-4 rounded-lg w-64"
-              onChange={handleFileChange}
-            />
+        <form onSubmit={handleDoneClick} className="flex flex-col justify-center items-center mb-6 w-full">
+          {/* Display Total Price */}
+          <div className="flex flex-row justify-center items-center gap-2 mb-4">
+            <span className="font-bold text-[16px]">Total price:</span>
+            <span className="font-bold text-[16px]">{totalPrice} Baht</span>
           </div>
-          {error && (
-            <p className="text-red-500 text-sm mt-2">{error}</p>
-          )}
-        </div>
 
-        <button
-          type="submit"
-          className={`text-white text-[18px] font-bold py-3 px-8 rounded-[10px] mt-8 ${
-            fileUploaded && !isUploading
-              ? 'bg-black cursor-pointer'
-              : 'bg-gray-400 cursor-not-allowed'
-          }`}
-          disabled={!fileUploaded || isUploading}
-        >
-          {isUploading ? 'Uploading...' : 'Done'}
-        </button>
-      </form>
-    </div>
+          {/* Upload Receipt Section */}
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="flex flex-row justify-center items-center gap-2">
+              <label htmlFor="upload" className="text-[16px] font-medium">
+                Upload receipt:
+              </label>
+              <input
+                  type="file"
+                  id="upload"
+                  name="file"
+                  accept="image/*,application/pdf"
+                  className="border border-gray-400 py-2 px-4 rounded-lg w-64"
+                  onChange={handleFileChange}
+              />
+            </div>
+            {error && (
+                <p className="text-red-500 text-sm mt-2">{error}</p>
+            )}
+          </div>
+
+          <button
+              type="submit"
+              className={`text-white text-[18px] font-bold py-3 px-8 rounded-[10px] mt-8 ${
+                  fileUploaded && !isUploading
+                      ? 'bg-black cursor-pointer'
+                      : 'bg-gray-400 cursor-not-allowed'
+              }`}
+              disabled={!fileUploaded || isUploading}
+          >
+            {isUploading ? 'Uploading...' : 'Done'}
+          </button>
+        </form>
+      </div>
   );
 }
