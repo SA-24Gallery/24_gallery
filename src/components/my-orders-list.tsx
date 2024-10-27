@@ -1,17 +1,17 @@
 "use client";
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
 interface Order {
   orderId: string;
   customer: string;
   email: string;
-  shippingOption: string; 
+  shippingOption: string;
   dateOrdered: string;
   dateReceived: string;
-  paymentStatus: string; 
-  status: string; 
-  statusDate: string; 
+  paymentStatus: string;
+  status: string;
+  statusDate: string;
 }
 
 export function MyOrdersList() {
@@ -21,26 +21,26 @@ export function MyOrdersList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'orderId' | 'dateOrdered' | 'dateReceived'>('orderId');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const router = useRouter(); 
+  const router = useRouter();
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('api/orders');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.statusText}`);
+      }
+      const data: Order[] = await response.json();
+      const latestOrders = deduplicateOrders(data);
+      setOrders(latestOrders);
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const response = await fetch('api/orders/order-list');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch orders: ${response.statusText}`);
-        }
-        const data: Order[] = await response.json();
-        const latestOrders = deduplicateOrders(data); // Deduplicate orders
-        setOrders(latestOrders);
-      } catch (error: any) {
-        console.error('Error fetching orders:', error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchOrders();
   }, []);
 
@@ -53,7 +53,7 @@ export function MyOrdersList() {
       }
     });
 
-    return Object.values(orderMap); // Return only unique orders
+    return Object.values(orderMap);
   };
 
   const handleSort = (field: 'orderId' | 'dateOrdered' | 'dateReceived') => {
@@ -83,25 +83,57 @@ export function MyOrdersList() {
     router.push(`/my-order-details?orderId=${orderId}`);
   };
 
+  const handleStatusUpdate = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/show-status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update order status: ${response.statusText}`);
+      }
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
   const getShippingOptionDisplay = (option: string) => {
     if (option === 'D') return 'Delivery';
     if (option === 'P') return 'Pick Up';
     return 'Unknown';
   };
 
-  const getStatusDisplay = (order: Order) => {
+const getStatusDisplay = (order: Order) => {
+    // ตรวจสอบสถานะการชำระเงินก่อน
     if (order.paymentStatus === 'N') {
       return 'Payment Not Approved';
     } else if (order.paymentStatus === 'P') {
-      return "Pending";
+      return 'Payment Pending';
     } else if (order.paymentStatus === 'A') {
-      if (!order.status || order.status.trim() === '') {
+      // ถ้าชำระเงินแล้ว ตรวจสอบ status
+      if (order.status === 'Order completed') {
+        return 'Order completed';
+      } else if (order.status === 'Receive order') {
+        return 'Receive order';
+      } else if (order.status === 'Shipped') {
+        return 'Shipped';
+      } else if (order.status === 'Canceled') {
+        return 'Canceled';
+      } else if (!order.status || order.status.trim() === '' || order.status === '0') {
         return 'Waiting for process';
       }
+      // ถ้ามีค่า status อื่นๆ ให้แสดงค่านั้นเลย
       return order.status;
     }
     return 'Unknown Status';
   };
+
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -121,7 +153,7 @@ export function MyOrdersList() {
     .sort(sortOrders);
 
   return (
-    <div className="max-w-7xl mx-auto bg-white p-6 rounded-[20px]">
+    <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
       <div className="mb-6">
         <input
           type="text"
