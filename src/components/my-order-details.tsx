@@ -107,12 +107,12 @@ export default function MyOrderDetailsPage() {
           <div>
             <h3 className="font-bold mb-1">Date ordered</h3>
             <p>{new Date(order.dateOrdered).toLocaleDateString()}</p>
-            <h3 className="font-bold mb-1">Date received</h3>
+            <h3 className="font-bold mb-1 mt-4">Date received</h3>
             <p>{order.dateReceived ? new Date(order.dateReceived).toLocaleDateString() : '-'}</p>
           </div>
 
           <div>
-            <h3 className="font-bold mb-1">Optional Notes or Address</h3>
+            <h3 className="font-bold mb-2">Optional Notes or Address</h3>
             <textarea
               value={order.note || "No additional notes provided."}
               className="w-full p-2 border border-gray-300 rounded-md bg-gray-50"
@@ -137,18 +137,17 @@ export default function MyOrderDetailsPage() {
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
             <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-                      <div className="mt-4">
+              <div className="mt-4">
               <h3 className="font-bold mb-1">Payment Status</h3>
               <p>{getPaymentStatusDisplay(order.paymentStatus)}</p>
             </div>
-            <h3 className="font-bold mb-1">Shipping Option</h3>
+            <h3 className="font-bold mb-1 mt-4">Shipping Option</h3>
             <p>{getShippingOptionDisplay(order.shippingOption)}</p>
             {order.shippingOption === "D" && order.trackingNumber && (
               <p>Tracking Number: #{order.trackingNumber}</p>
             )}
-            <p className="font-bold mb-2">Total price: {totalPrice} Baht</p>
 
-            <h3 className="font-bold mb-2">Details</h3>
+            <h3 className="font-bold mb-2 mt-4">Details</h3>
 
             {order.products.length > 0 ? (
               <div className="max-h-80 overflow-y-auto">
