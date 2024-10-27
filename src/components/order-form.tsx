@@ -284,17 +284,17 @@ const OrderForm = () => {
           {/* Paper type selection */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Paper type:</label>
-            <div className="flex gap-2">
+            <div className="flex gap-3.5">
               <button
                   type="button"
-                  className={`p-2 rounded-md ${paperType === 'matte' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  className={`py-2 px-4 rounded-[10px] ${paperType === 'matte' ? 'bg-black text-white text-[18px] font-bold' : 'bg-gray-200 text-[18px]'}`}
                   onClick={() => setPaperType('matte')}
               >
                 Matte
               </button>
               <button
                   type="button"
-                  className={`p-2 rounded-md ${paperType === 'glossy' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  className={`py-2 px-4 rounded-[10px] ${paperType === 'glossy' ? 'bg-black text-white text-[18px] font-bold' : 'bg-gray-200 text-[18px]'}`}
                   onClick={() => setPaperType('glossy')}
               >
                 Glossy
@@ -310,24 +310,24 @@ const OrderForm = () => {
           {/* Printing format selection */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Printing format:</label>
-            <div className="flex gap-2">
+            <div className="flex gap-3.5">
               <button
                   type="button"
-                  className={`p-2 rounded-md ${printingFormat === 'full page' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  className={`py-2 px-4 rounded-[10px] ${printingFormat === 'full page' ? 'bg-black text-white text-[18px] font-bold' : 'bg-gray-200 text-[18px]'}`}
                   onClick={() => setPrintingFormat('full page')}
               >
                 Full page
               </button>
               <button
                   type="button"
-                  className={`p-2 rounded-md ${printingFormat === 'full file' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  className={`py-2 px-4 rounded-[10px] ${printingFormat === 'full file' ? 'bg-black text-white text-[18px] font-bold' : 'bg-gray-200 text-[18px]'}`}
                   onClick={() => setPrintingFormat('full file')}
               >
                 Full file
               </button>
               <button
                   type="button"
-                  className={`p-2 rounded-md ${printingFormat === 'white border' ? 'bg-black text-white text-[16px] font-bold' : 'bg-gray-200'}`}
+                  className={`py-2 px-4 rounded-[10px] ${printingFormat === 'white border' ? 'bg-black text-white text-[18px] font-bold' : 'bg-gray-200 text-[18px]'}`}
                   onClick={() => setPrintingFormat('white border')}
               >
                 White border
