@@ -26,7 +26,7 @@ export function MyOrdersList() {
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders');
+        const response = await fetch('api/orders/order-list');
         if (!response.ok) {
           throw new Error(`Failed to fetch orders: ${response.statusText}`);
         }

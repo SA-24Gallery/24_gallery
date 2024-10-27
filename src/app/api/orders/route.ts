@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import AWS from 'aws-sdk';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import archiver from 'archiver';
+import { PassThrough } from 'stream';
 
 // Configure AWS SDK
 AWS.config.update({
@@ -218,7 +220,6 @@ export async function POST(request: Request) {
 }
 
 // GET request handler: Fetch orders or handle download
-// GET request handler: Fetch orders or handle download
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -231,19 +232,87 @@ export async function GET(request: Request) {
     const folderPath = searchParams.get('folderPath');
 
     if (download && folderPath) {
-      // [Your existing code for handling downloads]
-      // ...
+      // First, verify that the user has access to this folderPath
+      const sql = `
+        SELECT p.Product_id, p.Order_id, o.Email
+        FROM Product p
+        JOIN Orders o ON p.Order_id = o.Order_id
+        WHERE p.Url = ?
+      `;
+
+      const rows = await query<RowDataPacket[]>(sql, [folderPath]);
+
+      if (rows.length === 0) {
+        return NextResponse.json({ error: 'Folder not found or access denied' }, { status: 404 });
+      }
+
+      const product = rows[0];
+
+      if (session.user.role !== 'A' && product.Email !== session.user.email) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+
+      // Proceed to generate the zip file
+      const command = new ListObjectsV2Command({
+        Bucket: process.env.AWS_BUCKET_NAME!,
+        Prefix: folderPath,
+      });
+
+      const response = await s3Client.send(command);
+
+      const objects = response.Contents || [];
+
+      if (objects.length === 0) {
+        return NextResponse.json({ error: 'No files found in the folder' }, { status: 404 });
+      }
+
+      // Create a PassThrough stream
+      const passthroughStream = new PassThrough();
+
+      // Create a zip archive and pipe it to the passthrough stream
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      archive.pipe(passthroughStream);
+
+      // For each object, get its data and append to the archive
+      for (const object of objects) {
+        const key = object.Key!;
+        const objectStream = s3.getObject({
+          Bucket: process.env.AWS_BUCKET_NAME!,
+          Key: key,
+        }).createReadStream();
+
+        // Remove the folder path from the file name
+        const fileName = key.substring(folderPath.length);
+
+        archive.append(objectStream, { name: fileName });
+      }
+
+      // Finalize the archive
+      archive.finalize();
+
+      // Return the response with appropriate headers
+      return new Response(passthroughStream as any, {
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${folderPath.replace(/\//g, '_')}.zip"`,
+        },
+      });
     } else {
+      // Existing code to fetch orders
+      // ... [Your existing GET handler code, modified as below]
+
       // Continue with fetching orders
       const orderId = searchParams.get('orderId');
       const email = searchParams.get('email');
       const paymentStatus = searchParams.get('payment_status'); // Optional filter
       const orderDateNull = searchParams.get('order_date_null'); // Optional filter
 
-      const isAdmin = session.user.role === 'A';
+      let sql = '';
       const queryParams: any[] = [];
 
-      let sql = `
+    if (session.user.role === 'A') {
+      // Admin: Fetch all orders
+      sql = `
         SELECT 
           o.Order_id AS orderId,
           u.User_name AS customer,
@@ -265,35 +334,70 @@ export async function GET(request: Request) {
           o.Tracking_number AS trackingNumber,
           s.Status_name AS status
         FROM Orders o
-        JOIN Users u ON o.Email = u.Email
-        JOIN Product p ON o.Order_id = p.Order_id
+        LEFT JOIN Users u ON o.Email = u.Email
+        LEFT JOIN Product p ON o.Order_id = p.Order_id
         LEFT JOIN (
           SELECT s1.Order_id, s1.Status_name
           FROM Status s1
-          INNER JOIN (
-            SELECT Order_id, MAX(Status_date) AS MaxDate
-            FROM Status
-            GROUP BY Order_id
-          ) s2 ON s1.Order_id = s2.Order_id AND s1.Status_date = s2.MaxDate
+          WHERE s1.Status_date = (
+            SELECT MAX(s2.Status_date)
+            FROM Status s2
+            WHERE s2.Order_id = s1.Order_id
+          )
         ) s ON o.Order_id = s.Order_id
         WHERE 1=1
       `;
-
-      if (!isAdmin) {
-        sql += ` AND o.Email = ?`;
-        queryParams.push(session.user.email);
-      }
+    } else {
+      // User: Fetch only their orders
+      sql = `
+        SELECT 
+          o.Order_id AS orderId,
+          u.User_name AS customer,
+          u.Phone_number AS phone,
+          p.Product_id AS productId,
+          p.Album_name AS albumName,
+          p.Url AS folderPath,
+          p.Size AS size,
+          p.Paper_type AS paperType,
+          p.Printing_format AS printingFormat,
+          p.Product_qty AS productQty,
+          p.Price AS totalPrice,
+          o.Email AS email,
+          o.Shipping_option AS shippingOption,
+          o.Payment_status AS paymentStatus,
+          o.Note AS note,
+          o.Order_date AS dateOrdered,
+          o.Received_date AS dateReceived,
+          o.Tracking_number AS trackingNumber,
+          s.Status_name AS status
+        FROM Orders o
+        LEFT JOIN Users u ON o.Email = u.Email
+        LEFT JOIN Product p ON o.Order_id = p.Order_id
+        LEFT JOIN (
+          SELECT s1.Order_id, s1.Status_name
+          FROM Status s1
+          WHERE s1.Status_date = (
+            SELECT MAX(s2.Status_date)
+            FROM Status s2
+            WHERE s2.Order_id = s1.Order_id
+          )
+        ) s ON o.Order_id = s.Order_id
+        WHERE o.Email = ?
+      `;
+      queryParams.push(session.user.email);
+    }
 
       if (orderId) {
         sql += ` AND o.Order_id = ?`;
         queryParams.push(orderId);
       }
 
-      if (email && isAdmin) {
+      if (email && session.user.role === 'A') {
         sql += ` AND o.Email = ?`;
         queryParams.push(email);
       }
 
+      // Add Optional Filters
       if (paymentStatus) {
         sql += ` AND o.Payment_status = ?`;
         queryParams.push(paymentStatus);
@@ -305,48 +409,46 @@ export async function GET(request: Request) {
 
       sql += ` ORDER BY o.Order_date DESC`;
 
-      // Execute the optimized query
       const rows = await query<RowDataPacket[]>(sql, queryParams);
 
-      // Transform and group orders and their products using a Map for efficiency
-      const transformedOrdersMap = new Map<string, Order>();
+      // Transform and group orders and their products
+      const transformedOrders: Order[] = [];
 
-      for (const row of rows) {
-        let currentOrder = transformedOrdersMap.get(row.orderId);
+      for (const order of rows) {
+        // Find or create the current order in transformedOrders
+        let currentOrder = transformedOrders.find((o) => o.orderId === order.orderId);
 
-        if (!currentOrder) {
-          currentOrder = {
-            orderId: row.orderId,
-            customer: row.customer,
-            phone: row.phone,
-            email: row.email,
-            shippingOption: row.shippingOption,
-            dateOrdered: row.dateOrdered,
-            dateReceived: row.dateReceived,
-            paymentStatus: row.paymentStatus,
-            note: row.note,
-            trackingNumber: row.trackingNumber,
-            products: [],
-            status: row.status,
-          };
-          transformedOrdersMap.set(row.orderId, currentOrder);
-        }
+      if (!currentOrder) {
+        currentOrder = {
+          orderId: order.orderId,
+          customer: order.customer,
+          phone: order.phone,
+          email: order.email,
+          shippingOption: order.shippingOption,
+          dateOrdered: order.dateOrdered,
+          dateReceived: order.dateReceived,
+          paymentStatus: order.paymentStatus,
+          note: order.note,
+          trackingNumber: order.trackingNumber,
+          products: [],
+          status: order.status,
+        };
+        transformedOrders.push(currentOrder);
+      }
 
         const product: Product = {
-          productId: row.productId,
-          albumName: row.albumName,
-          folderPath: row.folderPath,
-          size: row.size,
-          paperType: row.paperType,
-          printingFormat: row.printingFormat,
-          quantity: row.productQty,
-          price: row.totalPrice,
+          productId: order.productId,
+          albumName: order.albumName,
+          folderPath: order.folderPath, // Include folderPath
+          size: order.size,
+          paperType: order.paperType,
+          printingFormat: order.printingFormat,
+          quantity: order.productQty,
+          price: order.totalPrice,
         };
 
         currentOrder.products.push(product);
       }
-
-      const transformedOrders = Array.from(transformedOrdersMap.values());
 
       if (!transformedOrders.length) {
         return NextResponse.json({ message: 'No orders found' }, { status: 404 });
