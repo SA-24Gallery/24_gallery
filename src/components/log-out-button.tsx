@@ -2,18 +2,21 @@
 
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { closePool } from '@/lib/db'; // import function closePool
 
 export const LogOutButton = () => {
+// In your client-side component
     const handleSignOut = async () => {
         try {
-            // Disconnect from database first
-            await closePool();
+            // Call the API route to close the pool
+            const response = await fetch('/api/close-pool', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error('Failed to close database pool');
+            }
 
             // Then sign out
             await signOut({
                 callbackUrl: "/",
-                redirect: true
+                redirect: true,
             });
         } catch (error) {
             console.error("Logout failed:", error);

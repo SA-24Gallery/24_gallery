@@ -12,7 +12,6 @@ export default async function Home() {
             <Image
                 src="/images/banner.svg"
                 alt="Poster"
-                layout="responsive"
                 width={1920}
                 height={818.67}
             />

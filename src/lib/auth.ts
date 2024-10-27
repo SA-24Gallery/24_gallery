@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { query } from "@/lib/db";
 import { RowDataPacket } from "mysql2";
+import { JWT } from "next-auth/jwt";
 
 interface UserRow extends RowDataPacket {
     Email: string;
@@ -10,6 +11,14 @@ interface UserRow extends RowDataPacket {
     Role: string;
     Phone_number: string;
     User_name: string;
+}
+
+// กำหนด interface สำหรับ JWT token
+interface ExtendedJWT extends JWT {
+    role?: string;
+    phone_number?: string;
+    exp?: number;
+    iat?: number;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -56,30 +65,52 @@ export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     session: {
         strategy: "jwt",
-        maxAge: 6 * 60 * 60,
+        maxAge: 6 * 60 * 60, // 6 hours in seconds
+    },
+    jwt: {
+        maxAge: 6 * 60 * 60, // 6 hours in seconds
+    },
+    pages: {
+        signIn: '/login',
+        signOut: '/login',
     },
 
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user, trigger, session }): Promise<ExtendedJWT> {
+            const extendedToken = token as ExtendedJWT;
+
             if (user) {
-                token.role = user.role;
-                token.phone_number = user.phone_number;
+                extendedToken.role = user.role;
+                extendedToken.phone_number = user.phone_number;
+                extendedToken.iat = Math.floor(Date.now() / 1000);
+                extendedToken.exp = Math.floor(Date.now() / 1000) + (6 * 60 * 60);
             }
-    
+
             if (trigger === "update" && session) {
-                token = {
-                    ...token,
+                return {
+                    ...extendedToken,
                     ...session.user,
-                  };
+                };
             }
-    
-            return token;
+
+            // เช็คเวลาหมดอายุของ token
+            if (extendedToken.exp && Date.now() >= extendedToken.exp * 1000) {
+                throw new Error('Token expired');
+            }
+
+            return extendedToken;
         },
         async session({ session, token }) {
+            const extendedToken = token as ExtendedJWT;
+
             if (session.user) {
-                session.user.role = token.role;
-                session.user.phone_number = token.phone_number;
-                session.user.name = token.name;
+                session.user.role = extendedToken.role;
+                session.user.phone_number = extendedToken.phone_number;
+                session.user.name = extendedToken.name;
+
+                if (extendedToken.exp) {
+                    session.expires = new Date(extendedToken.exp * 1000).toISOString();
+                }
             }
             return session;
         }
