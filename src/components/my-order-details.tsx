@@ -61,6 +61,18 @@ export default function MyOrderDetailsPage() {
     return 'Unknown'; // Fallback in case of an unexpected value
   };
 
+  // Function to map paymentStatus to its corresponding display value
+  const getPaymentStatusDisplay = (paymentStatus: string) => {
+    if (paymentStatus === "A") {
+      return "Payment Approved";
+    } else if (paymentStatus === "N") {
+      return "Payment Not Approved";
+    } else if (paymentStatus === "P") {
+      return "Payment Pending";
+    }
+    return "Unknown Payment Status";
+  };
+
   if (loading) {
     return <div>Loading order details...</div>;
   }
@@ -125,7 +137,12 @@ export default function MyOrderDetailsPage() {
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
             <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-            <p>Shipping option: {getShippingOptionDisplay(order.shippingOption)}</p>
+                      <div className="mt-4">
+              <h3 className="font-bold mb-1">Payment Status</h3>
+              <p>{getPaymentStatusDisplay(order.paymentStatus)}</p>
+            </div>
+            <h3 className="font-bold mb-1">Shipping Option</h3>
+            <p>{getShippingOptionDisplay(order.shippingOption)}</p>
             {order.shippingOption === "D" && order.trackingNumber && (
               <p>Tracking Number: #{order.trackingNumber}</p>
             )}

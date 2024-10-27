@@ -44,12 +44,10 @@ export function MyOrdersList() {
     fetchOrders();
   }, []);
 
-  // Deduplication logic to get the latest status for each order
   const deduplicateOrders = (orders: Order[]): Order[] => {
     const orderMap: { [orderId: string]: Order } = {};
 
     orders.forEach(order => {
-      // If the order ID doesn't exist in the map or if the current statusDate is more recent, update the map
       if (!orderMap[order.orderId] || new Date(order.statusDate) > new Date(orderMap[order.orderId].statusDate)) {
         orderMap[order.orderId] = order;
       }
@@ -105,6 +103,11 @@ export function MyOrdersList() {
     return 'Unknown Status';
   };
 
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+  };
+
   if (loading) {
     return <div>Loading your orders...</div>;
   }
@@ -154,12 +157,8 @@ export function MyOrdersList() {
                 onClick={() => handleRowClick(order.orderId)}
               >
                 <td className="px-6 py-4">{order.orderId}</td>
-                <td className="px-6 py-4">
-                  {new Date(order.dateOrdered).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4">
-                  {order.paymentStatus === 'A' ? new Date(order.dateReceived).toLocaleDateString() : '-'}
-                </td>
+                <td className="px-6 py-4">{formatDate(order.dateOrdered)}</td>
+                <td className="px-6 py-4">{order.paymentStatus === 'A' ? formatDate(order.dateReceived) : '-'}</td>
                 <td className="px-6 py-4">{getShippingOptionDisplay(order.shippingOption)}</td>
                 <td className="px-6 py-4">{getStatusDisplay(order)}</td>
               </tr>
