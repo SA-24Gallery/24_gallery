@@ -43,7 +43,7 @@ interface StatusStep {
 
 export default function ManageOrderDetails() {
     const [steps, setSteps] = useState<StatusStep[]>([]);
-    const [currentStatusIndex, setCurrentStatusIndex] = useState(0);
+    const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
     const [order, setOrder] = useState<OrderType | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function ManageOrderDetails() {
     const searchParams = useSearchParams();
     const orderId = searchParams.get("orderId");
 
-    // แยก fetchOrderDetails ออกมาเป็นฟังก์ชันที่เรียกใช้ได้
+    // Fetch order details
     const fetchOrderDetails = async () => {
         try {
             const response = await fetch(`/api/orders?orderId=${orderId}`);
@@ -97,77 +97,84 @@ export default function ManageOrderDetails() {
         }
     };
 
+    // Fetch receipt URL
+    const fetchReceiptUrl = async () => {
+        try {
+            const response = await fetch(`/api/view-receipt?orderId=${orderId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch receipt: ${response.statusText}`);
+            }
+            const data = await response.json();
+            setReceiptUrl(data.receiptUrl);
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchStatusTimeline = async () => {
+        try {
+            const statusResponse = await fetch(`/api/show-status?orderId=${orderId}`);
+            if (statusResponse.ok) {
+                const statuses = await statusResponse.json();
+                const formattedSteps = statuses.map((status: any) => ({
+                    title: status.statusName,
+                    date: status.statusDate ? new Date(status.statusDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show date separately
+                    time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show time separately
+                    completed: status.isCompleted === 1
+                }));
+                setSteps(formattedSteps);
+            }
+        } catch (error) {
+            console.error('Error fetching status timeline:', error);
+        }
+    };
+
+    // Combined useEffect
     useEffect(() => {
         if (orderId) {
             fetchOrderDetails();
+            fetchStatusTimeline();
+            fetchReceiptUrl(); // Fetch the receipt URL
         } else {
             setLoading(false);
             setError("No order ID provided.");
         }
     }, [orderId]);
 
+    // Handle status update
+    const handleStatusUpdate = async () => {
+        if (!order) return;
 
-const fetchStatusTimeline = async () => {
-    try {
-        const statusResponse = await fetch(`/api/show-status?orderId=${orderId}`);
-        if (statusResponse.ok) {
-            const statuses = await statusResponse.json();
-            const formattedSteps = statuses.map((status: any) => ({
-                title: status.statusName,
-                date: status.statusDate ? new Date(status.statusDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show date separately
-                time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) : null, // Show time separately
-                completed: status.isCompleted === 1
-            }));
-            setSteps(formattedSteps);
+        try {
+            const response = await fetch('/api/show-status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update status: ${response.statusText}`);
+            }
+
+            // Refresh the status timeline after update
+            await fetchStatusTimeline();
+
+        } catch (error) {
+            console.error('Error updating status:', error);
         }
-    } catch (error) {
-        console.error('Error fetching status timeline:', error);
-    }
-};
+    };
 
+    const isAllStatusesCompleted = (): boolean => {
+        return steps.every((step) => step.completed);
+    };
 
-// ปรับ useEffect
-useEffect(() => {
-    if (orderId) {
-        fetchOrderDetails();
-        fetchStatusTimeline(); // เพิ่มการเรียก status
-    } else {
-        setLoading(false);
-        setError("No order ID provided.");
-    }
-}, [orderId]);
-
-// ปรับ handleStatusUpdate
-const handleStatusUpdate = async () => {
-    if (!order) return;
-
-    try {
-        const response = await fetch('/api/show-status', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                orderId: order.orderId
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to update status: ${response.statusText}`);
-        }
-
-        // Refresh the status timeline after update
-        await fetchStatusTimeline();
-
-    } catch (error) {
-        console.error('Error updating status:', error);
-    }
-};
-
-const isAllStatusesCompleted = (): boolean => {
-    return steps.every((step) => step.completed);
-};
-
+    // Handle payment update
     const handlePaymentUpdate = async () => {
         if (!order) return;
 
@@ -182,7 +189,6 @@ const isAllStatusesCompleted = (): boolean => {
                 body: JSON.stringify({
                     orderId: order.orderId,
                     payment_status: 'A',
-                    // ส่งข้อมูลอื่นๆ ที่มีอยู่เดิม
                     shippingOption: order.shippingOption,
                     note: order.notes,
                     receivedDate: currentDateTime,
@@ -203,13 +209,15 @@ const isAllStatusesCompleted = (): boolean => {
                 dateReceived: currentDateTime
             });
 
-            // Refresh data to ensure we have the latest state
-            await fetchOrderDetails();
+            await fetchOrderDetails();   // รีเฟรชข้อมูลออเดอร์
+            await fetchStatusTimeline(); // รีเฟรชข้อมูลไทม์ไลน์
+            
         } catch (error) {
             console.error('Error updating payment status:', error);
         }
     };
 
+    // Handle tracking number update
     const handleTrackingNumberUpdate = async () => {
         if (!order) return;
 
@@ -221,7 +229,7 @@ const isAllStatusesCompleted = (): boolean => {
                 },
                 body: JSON.stringify({
                     orderId: order.orderId,
-                    trackingNumber: trackingNumberInput, // Add tracking number from input
+                    trackingNumber: trackingNumberInput,
                     shippingOption: order.shippingOption,
                     note: order.notes,
                     receivedDate: order.dateReceived,
@@ -235,8 +243,8 @@ const isAllStatusesCompleted = (): boolean => {
                 throw new Error(`Failed to update tracking number: ${response.statusText}`);
             }
 
-            await fetchOrderDetails(); // Refresh order details
-            setIsDialogOpen(false); // Close dialog after submission
+            await fetchOrderDetails();
+            setIsDialogOpen(false);
         } catch (error) {
             console.error('Error updating tracking number:', error);
         }
@@ -248,8 +256,21 @@ const isAllStatusesCompleted = (): boolean => {
         return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
 
+
+
+    useEffect(() => {
+        if (orderId) {
+            setLoading(true); // เปิด loading ตอนเริ่มดึงข้อมูล
+            fetchOrderDetails();
+            fetchStatusTimeline();
+        } else {
+            setLoading(false);
+            setError("No order ID provided.");
+        }
+    }, [orderId]);
+
     if (loading) {
-        return <div>Loading order details...</div>;
+        return <div>Loading order details...</div>; // แสดงผลขณะรอข้อมูล
     }
 
     if (error) {
@@ -294,51 +315,49 @@ const isAllStatusesCompleted = (): boolean => {
                         </div>
                     </div>
                     <div>
-    <h3 className="font-bold mb-1">Status</h3>
-    <OrderTimeline steps={steps} />
+                        <h3 className="font-bold mb-1">Status</h3>
+                        <OrderTimeline steps={steps} />
 
-    <div className="flex space-x-4 mt-4">
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button
-                    variant="default"
-                    disabled={order.payment_status !== "A" || isAllStatusesCompleted()} // ปิดการใช้งานปุ่มเมื่อสถานะครบหรือการชำระเงินยังไม่ Approve
-                >
-                    {order.payment_status === "A" && !isAllStatusesCompleted()
-                        ? "Update"
-                        : isAllStatusesCompleted()
-                        ? "All statuses are completed"
-                        : "Cannot update until payment is approved"
-                    }
-                </Button>
-            </AlertDialogTrigger>
-            {order.payment_status === "A" && !isAllStatusesCompleted() && (
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to update the status? This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel asChild>
-                            <Button variant="secondary">Cancel</Button>
-                        </AlertDialogCancel>
-                        <AlertDialogAction asChild>
-                            <Button onClick={handleStatusUpdate} variant="default">
-                                Confirm
-                            </Button>
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            )}
-        </AlertDialog>
-    </div>
-</div>
+                        <div className="flex space-x-4 mt-4">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="default"
+                                    disabled={order.payment_status !== "A" || isAllStatusesCompleted()} // ปิดการใช้งานปุ่มถ้าชำระเงินยังไม่ Approve หรือสถานะครบแล้ว
+                                >
+                                    {order.payment_status === "A" && !isAllStatusesCompleted()
+                                        ? "Update" // แสดงปุ่มอัปเดตถ้าสถานะการชำระเงินเป็น A และสถานะยังไม่ครบ
+                                        : isAllStatusesCompleted()
+                                        ? "All statuses are completed" // ถ้าสถานะครบแล้ว จะแสดงว่าครบแล้ว
+                                        : "Cannot update until payment is approved" // ถ้าชำระเงินยังไม่ approve
+                                    }
+                                </Button>
+                            </AlertDialogTrigger>
+                            {order.payment_status === "A" && !isAllStatusesCompleted() && (
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to update the status? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel asChild>
+                                            <Button variant="secondary">Cancel</Button>
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction asChild>
+                                            <Button onClick={handleStatusUpdate} variant="default">
+                                                Confirm
+                                            </Button>
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            )}
+                        </AlertDialog>
+                    </div>
+                    </div>
+                    </div>
 
-
-
-                </div>
 
                 {/* Right Section */}
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
@@ -351,42 +370,42 @@ const isAllStatusesCompleted = (): boolean => {
                         {order.trackingNumber && (
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
                         )}
-                       {order.shippingOption === "D" && (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-            <Button variant="default" disabled={order.payment_status !== "A"}>
-                Add Tracking Number
-            </Button>
-        </DialogTrigger>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Add Tracking Number</DialogTitle>
-                <DialogDescription>
-                    Please enter the tracking number for this delivery order.
-                </DialogDescription>
-            </DialogHeader>
-            <input
-                type="text"
-                placeholder="Enter tracking number"
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={trackingNumberInput}
-                onChange={(e) => setTrackingNumberInput(e.target.value)}
-            />
-            <DialogFooter>
-                <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="default"
-                    onClick={handleTrackingNumberUpdate}
-                    disabled={!trackingNumberInput.trim()}
-                >
-                    Save
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-)}
+                        {order.shippingOption === "D" && (
+                            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="default" disabled={order.payment_status !== "A"}>
+                                        Add Tracking Number
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add Tracking Number</DialogTitle>
+                                        <DialogDescription>
+                                            Please enter the tracking number for this delivery order.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter tracking number"
+                                        className="w-full p-2 border border-gray-300 rounded-md"
+                                        value={trackingNumberInput}
+                                        onChange={(e) => setTrackingNumberInput(e.target.value)}
+                                    />
+                                    <DialogFooter>
+                                        <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            variant="default"
+                                            onClick={handleTrackingNumberUpdate}
+                                            disabled={!trackingNumberInput.trim()}
+                                        >
+                                            Save
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
 
                         <p className="mb-2">
                             Payment status: {
@@ -396,15 +415,10 @@ const isAllStatusesCompleted = (): boolean => {
                             }
                         </p>
                         
-
-                        <div className="flex space-x-4 mb-4">
-                            <Button 
-                                variant="default" 
-                                size="default" 
-                                disabled={!order.receipt_pic}
-                            >
-                                {order.receipt_pic ? (
-                                    <a href={order.receipt_pic} target="_blank" rel="noopener noreferrer">
+                        <div className="space-x-4">
+                            <Button variant="default" size="default" disabled={!receiptUrl}>
+                                {receiptUrl ? (
+                                    <a href={receiptUrl} target="_blank" rel="noopener noreferrer">
                                         View Receipt
                                     </a>
                                 ) : (
