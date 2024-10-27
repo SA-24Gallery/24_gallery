@@ -121,7 +121,7 @@ export function MyOrdersList() {
     .sort(sortOrders);
 
   return (
-    <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg">
+    <div className="max-w-7xl mx-auto bg-white p-6 rounded-[20px]">
       <div className="mb-6">
         <input
           type="text"

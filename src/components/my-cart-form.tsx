@@ -198,7 +198,7 @@ export default function MyCartForm() {
 
     return (
         <div className="w-full flex justify-center">
-            <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-lg shadow-md">
+            <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-[20px]">
                 {/* Left Column */}
                 <div className="flex-1 bg-white p-6 rounded-lg">
                     {order ? (
