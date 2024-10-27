@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import OrderTimeline from "@/components/order-details/order-timeline";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, } from "@/components/ui/alert-dialog";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductItem from "@/components/order-details/product-item";
 
@@ -46,6 +47,8 @@ export default function ManageOrderDetails() {
     const [order, setOrder] = useState<OrderType | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false); // State for dialog
+    const [trackingNumberInput, setTrackingNumberInput] = useState(""); // State for tracking number input
     const searchParams = useSearchParams();
     const orderId = searchParams.get("orderId");
 
@@ -207,7 +210,7 @@ const isAllStatusesCompleted = (): boolean => {
         }
     };
 
-    const handleTrackingNumberUpdate = async (trackingNumber: string) => {
+    const handleTrackingNumberUpdate = async () => {
         if (!order) return;
 
         try {
@@ -218,8 +221,7 @@ const isAllStatusesCompleted = (): boolean => {
                 },
                 body: JSON.stringify({
                     orderId: order.orderId,
-                    trackingNumber: trackingNumber,
-                    // ส่งข้อมูลอื่นๆ ที่มีอยู่เดิม
+                    trackingNumber: trackingNumberInput, // Add tracking number from input
                     shippingOption: order.shippingOption,
                     note: order.notes,
                     receivedDate: order.dateReceived,
@@ -233,7 +235,8 @@ const isAllStatusesCompleted = (): boolean => {
                 throw new Error(`Failed to update tracking number: ${response.statusText}`);
             }
 
-            await fetchOrderDetails();
+            await fetchOrderDetails(); // Refresh order details
+            setIsDialogOpen(false); // Close dialog after submission
         } catch (error) {
             console.error('Error updating tracking number:', error);
         }
@@ -332,6 +335,42 @@ const isAllStatusesCompleted = (): boolean => {
                         {order.trackingNumber && (
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
                         )}
+                       {order.shippingOption === "D" && (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+            <Button variant="default" disabled={order.payment_status !== "A"}>
+                Add Tracking Number
+            </Button>
+        </DialogTrigger>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Add Tracking Number</DialogTitle>
+                <DialogDescription>
+                    Please enter the tracking number for this delivery order.
+                </DialogDescription>
+            </DialogHeader>
+            <input
+                type="text"
+                placeholder="Enter tracking number"
+                className="w-full p-2 border border-gray-300 rounded-md"
+                value={trackingNumberInput}
+                onChange={(e) => setTrackingNumberInput(e.target.value)}
+            />
+            <DialogFooter>
+                <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                </Button>
+                <Button
+                    variant="default"
+                    onClick={handleTrackingNumberUpdate}
+                    disabled={!trackingNumberInput.trim()}
+                >
+                    Save
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+)}
 
                         <p className="mb-2">
                             Payment status: {
@@ -340,6 +379,7 @@ const isAllStatusesCompleted = (): boolean => {
                                 order.payment_status === 'A' ? 'Approved' : 'Unknown'
                             }
                         </p>
+                        
 
                         <div className="flex space-x-4 mb-4">
                             <Button 
