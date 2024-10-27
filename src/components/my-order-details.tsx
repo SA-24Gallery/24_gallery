@@ -93,7 +93,7 @@ export default function MyOrderDetailsPage() {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-lg shadow-md">
+      <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-[20px]">
         {/* Left Section */}
         <div className="flex-1 bg-white p-6 rounded-lg space-y-6">
           <h2 className="text-2xl font-bold mb-4">Order ID #{order.orderId}</h2>
@@ -136,8 +136,7 @@ export default function MyOrderDetailsPage() {
         {/* Right Section */}
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
-            <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-              <div className="mt-4">
+              <div className="mt-12">
               <h3 className="font-bold mb-1">Payment Status</h3>
               <p>{getPaymentStatusDisplay(order.paymentStatus)}</p>
             </div>
