@@ -70,6 +70,21 @@ export default function Payment() {
         throw new Error('Failed to update order status');
       }
 
+      const notificationResponse = await fetch('/api/notify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+        }),
+      });
+  
+      if (!notificationResponse.ok) {
+        const errorData = await notificationResponse.json();
+        throw new Error(errorData.message || 'Failed to send notification');
+    }
+
       // เปลี่ยนเส้นทางไปยังหน้า payment-success พร้อมกับ orderId
       router.push(`/payment-success?orderId=${orderId}`);
     } catch (err) {
