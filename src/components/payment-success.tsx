@@ -1,7 +1,63 @@
+"use client";
+
 import Link from 'next/link';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+interface OrderData {
+  orderId: string;
+  dateOrdered: string | null;
+}
 
 export function PaymentSuccess() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get('orderId');
+  const [orderData, setOrderData] = useState<OrderData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!orderId) {
+      setError('Order ID is missing.');
+      setLoading(false);
+      return;
+    }
+
+    const fetchOrderData = async () => {
+      try {
+        const response = await fetch(`/api/get-pay-success?orderId=${orderId}`);
+        if (!response.ok) throw new Error('Failed to fetch order data.');
+        
+        const data = await response.json();
+        console.log('Fetched order data:', data);  // Log data here to verify
+        setOrderData(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };    
+
+    fetchOrderData();
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-red-500 text-center p-4">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white p-[60px] rounded-[30px] max-w-[593px] max-h-[569px] w-full text-center">
       <div className="flex items-center justify-center mb-[30px]">
@@ -21,15 +77,17 @@ export function PaymentSuccess() {
       <h1 className="text-[32px] font-bold mb-[25px]">Payment Successful</h1>
       
       {/* Order Number */}
-      <p className="text-[20px] font-semibold mb-[10px] ">ORDER NUMBER #12345</p>
+      <p className="text-[20px] font-semibold mb-[10px]">ORDER NUMBER #{orderData?.orderId}</p>
       
       {/* Date and Time */}
-      <p className="text-[16px] mb-[10px]">Date&Time: Sat 14 Sep 2024, 9:59</p>
+      <p className="text-[16px] mb-[10px]">
+        Date&Time: {orderData?.dateOrdered ? new Date(orderData.dateOrdered).toLocaleString() : 'N/A'}
+      </p>
       
       {/* Transaction Review */}
       <p className="text-[16px] text-gray-600 mb-[50px]">Your transaction is currently under review.</p>
 
-      <Link href="/my-order-details">
+      <Link href="/my-orders-list">
         <button className="bg-black text-white text-[20px] font-bold py-[15px] px-[30px] rounded-[20px]">
           Back to my order
         </button>
