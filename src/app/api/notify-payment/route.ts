@@ -61,12 +61,11 @@ export async function POST(
 
     // Prepare notification message
     const message = `New payment received for order #${orderId}.`;
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     // Insert notification
     await query(
-      'INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email) VALUES (?, ?, ?, ?, ?, ?)',
-      [messageId, message, currentDate, orderId, 0, adminEmail]
+      'INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email) VALUES (?, ?, NOW(), ?, ?, ?)',
+      [messageId, message, orderId, 0, adminEmail]
     );
 
     return NextResponse.json({
