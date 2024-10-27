@@ -23,23 +23,37 @@ export async function GET() {
     }
     try {
         // Simplified query without email filter for now
-        const sql = `
-            SELECT 
-                Order_id as orderId,
-                Date_Ordered as dateOrdered,
-                Date_Received as dateReceived,
-                Delivery_Option as shippingOption,
-                Status as paymentStatus,
-                CASE 
-                    WHEN Status = 'A' AND Date_Received IS NULL THEN 'Processing'
-                    WHEN Status = 'A' AND Date_Received IS NOT NULL THEN 'Completed'
-                    ELSE Status 
-                END as status,
-                NOW() as statusDate
-            FROM Order_List_View 
-            WHERE Customer_Email = ?
-            ORDER BY Date_Ordered DESC
-        `;
+        let sql = `
+        SELECT DISTINCT
+          o.Order_id AS orderId,
+          o.Email AS email,
+          o.Shipping_option AS shippingOption,
+          o.Order_date AS dateOrdered,
+          o.Received_date AS dateReceived,
+          o.Payment_status AS paymentStatus,
+          CASE
+            WHEN o.Payment_status = 'N' THEN 'Payment Not Approved'
+            WHEN o.Payment_status = 'P' THEN 'Payment Pending'
+            WHEN o.Payment_status = 'A' AND s.Status_name = 'Receive order' THEN 'Receive order'
+            WHEN o.Payment_status = 'A' AND s.Status_name = 'Order completed' THEN 'Order completed'
+            WHEN o.Payment_status = 'A' AND s.Status_name = 'Shipped' THEN 'Shipped'
+            WHEN o.Payment_status = 'A' AND s.Status_name = 'Canceled' THEN 'Canceled'
+            WHEN o.Payment_status = 'A' AND (s.Status_name IS NULL OR s.Status_name = '') THEN 'Waiting for process'
+            ELSE 'Unknown'
+          END AS status,
+          COALESCE(s.Status_date, o.Order_date) AS statusDate
+        FROM Orders o
+        LEFT JOIN (
+          SELECT 
+            Order_id,
+            Status_name,
+            Status_date,
+            ROW_NUMBER() OVER (PARTITION BY Order_id ORDER BY Status_date DESC) as rn
+          FROM Status
+          WHERE Is_completed_status = 1
+        ) s ON o.Order_id = s.Order_id AND s.rn = 1
+        WHERE 1=1
+      `;
 
         const orders = await query<OrderRow[]>(sql, [session.user.email]);
 
