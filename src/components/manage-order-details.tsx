@@ -201,7 +201,22 @@ export default function ManageOrderDetails() {
             if (!response.ok) {
                 throw new Error(`Failed to update payment status: ${response.statusText}`);
             }
-
+            const updateStatusResponse = await fetch('/api/show-status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    statusName: 'Receive order', // ชื่อสถานะที่คุณต้องการอัปเดต
+                    isCompleted: 1, // อัปเดตให้สถานะนี้เป็นเสร็จสิ้น
+                }),
+            });
+    
+            if (!updateStatusResponse.ok) {
+                throw new Error(`Failed to update order status: ${updateStatusResponse.statusText}`);
+            }
+    
             // Update local state temporarily
             setOrder({
                 ...order,
