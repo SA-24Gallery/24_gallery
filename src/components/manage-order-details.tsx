@@ -86,15 +86,14 @@ export default function ManageOrderDetails() {
                         folderPath: product.folderPath,
                     })),
                 });
-                setSteps(fetchedOrder.statusTimeline || []);
+                // ลบการอัปเดต steps ที่นี่
+                // setSteps(fetchedOrder.statusTimeline || []);
             } else {
                 setOrder(null);
                 setError("Order not found.");
             }
         } catch (error: any) {
             setError(error.message);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -109,8 +108,6 @@ export default function ManageOrderDetails() {
             setReceiptUrl(data.receiptUrl);
         } catch (error: any) {
             setError(error.message);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -126,8 +123,7 @@ export default function ManageOrderDetails() {
                     completed: status.isCompleted === 1
                 }));
                 setSteps(formattedSteps);
-                
-                // เพิ่ม type ให้กับ parameters ใน reduce function
+
                 const lastCompletedIndex = formattedSteps.reduce((lastIndex: number, step: StatusStep, index: number) => {
                     return step.completed ? index : lastIndex;
                 }, -1);
@@ -173,15 +169,8 @@ export default function ManageOrderDetails() {
                     }),
                 });
     
-                // Update local state
-                const newSteps = steps.map((step, index) => {
-                    if (index === currentStatusIndex + 1) {
-                        return { ...step, completed: true };
-                    }
-                    return step;
-                });
-                setSteps(newSteps);
-                setCurrentStatusIndex(currentStatusIndex + 1);
+                // ลบการอัปเดตสถานะภายในฟังก์ชัน
+                // fetchStatusTimeline จะจัดการอัปเดตสถานะให้
             }
     
             // Refresh timeline data
@@ -250,13 +239,6 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update order status: ${updateStatusResponse.statusText}`);
             }
 
-            // Update local state
-            setOrder({
-                ...order,
-                payment_status: 'A',
-                dateReceived: currentDateTime
-            });
-
             // Refresh data
             await fetchOrderDetails();
             await fetchStatusTimeline();
@@ -315,9 +297,16 @@ export default function ManageOrderDetails() {
     useEffect(() => {
         if (orderId) {
             setLoading(true);
-            fetchOrderDetails();
-            fetchStatusTimeline();
-            fetchReceiptUrl();
+            Promise.all([
+                fetchOrderDetails(),
+                fetchStatusTimeline(),
+                fetchReceiptUrl(),
+            ]).then(() => {
+                setLoading(false);
+            }).catch((error) => {
+                setError(error.message);
+                setLoading(false);
+            });
         } else {
             setLoading(false);
             setError("No order ID provided.");
