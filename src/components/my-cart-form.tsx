@@ -1,30 +1,66 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import ProductItem from "@/components/order-details/product-item";
 
+// Define interfaces for better type safety and performance
+interface Product {
+    product_id: string;
+    album_name: string;
+    size: string;
+    paper_type: string;
+    printing_format: string;
+    product_qty: number;
+    price_per_unit: number;
+    folderPath: string;
+}
+
+interface OrderData {
+    order_id: string;
+    customer_name: string;
+    email: string;
+    phone: string;
+    order_date: string;
+    received_date: string;
+    payment_status: string;
+    products: Product[];
+}
+
 export default function MyCartForm() {
     const router = useRouter();
-
-    const [order, setOrder] = useState<{
-        order_id: string;
-        customer_name: string;
-        email: string;
-        phone: string;
-        order_date: string;
-        received_date: string;
-        payment_status: string;
-        products: any[];
-    } | null>(null);
-
+    const [order, setOrder] = useState<OrderData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [shippingOption, setShippingOption] = useState("");
+    const [shippingOption, setShippingOption] = useState("PickUp"); // Set default to "PickUp"
     const [note, setNote] = useState("");
-    const shippingCost = shippingOption === "ThailandPost" ? 50 : 0;
+
+    // Memoize shipping cost calculation
+    const shippingCost = useMemo(() => (shippingOption === "ThailandPost" ? 50 : 0), [shippingOption]);
+
+    // Memoize total price calculation
+    const totalPrice = useMemo(() => {
+        if (!order?.products) return 0;
+        return (
+            order.products.reduce((total, product) => {
+                return total + product.price_per_unit * product.product_qty;
+            }, 0) + shippingCost
+        );
+    }, [order?.products, shippingCost]);
+
+    // Memoize date formatting function
+    const formatDate = useMemo(
+        () => (dateString: string): string => {
+            if (!dateString) return "N/A";
+            const date = new Date(dateString);
+            return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+        },
+        []
+    );
 
     useEffect(() => {
+        let isMounted = true; // To avoid setting state on an unmounted component
+
         const fetchOrderData = async () => {
             try {
                 const response = await fetch('/api/orders?order_date_null=true', {
@@ -35,12 +71,12 @@ export default function MyCartForm() {
 
                 if (!response.ok) {
                     console.error('Failed to fetch order data');
-                    setOrder(null);
+                    if (isMounted) setOrder(null);
                     return;
                 }
 
                 const data = await response.json();
-                if (data && data.length > 0) {
+                if (isMounted && data && data.length > 0) {
                     const orderData = data[0];
                     setOrder({
                         order_id: orderData.orderId,
@@ -61,95 +97,109 @@ export default function MyCartForm() {
                             folderPath: product.folderPath,
                         })),
                     });
-                } else {
+                } else if (isMounted) {
                     setOrder(null);
                 }
-            } catch (err) {
-                console.error('Error fetching order data:', err);
-                setOrder(null);
+            } catch (error: unknown) {
+                if (error instanceof Error) {
+                    console.error('Error fetching order data:', error.message);
+                } else {
+                    console.error('Unknown error fetching order data');
+                }
+                if (isMounted) setOrder(null);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         fetchOrderData();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    const handlePayment = async () => {
-        if (order && order.products.length > 0) {
-            try {
-                // Calculate payment deadline (3 days from now)
-                const paymentDeadline = new Date();
-                paymentDeadline.setDate(paymentDeadline.getDate() + 3);
-    
-                // แปลง shippingOption เป็น 'D' หรือ 'P' ก่อนบันทึก
-                const shippingCode = shippingOption === "ThailandPost" ? "D" : "P";
-    
-                await fetch('/api/orders', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        orderId: order.order_id,
-                        shippingOption: shippingCode,  // ใช้ shippingCode ที่แปลงแล้ว
-                        note,
-                        payment_status: 'N',
-                        order_date: new Date(),
-                        payment_deadline: paymentDeadline
-                    }),
-                });
-    
-                router.push(`/payment?orderId=${order.order_id}&totalPrice=${totalPrice}`);
-            } catch (err) {
-                console.error('Error updating order:', err);
-            }
-        }
-    };
-    
-
-    const handleRemoveProduct = async (index: number) => {
-        if (!order) return;
-
-        const productToRemove = order.products[index];
-        const updatedProducts = order.products.filter((_, i) => i !== index);
+    const handlePayment = useCallback(async () => {
+        if (!order?.products.length) return;
 
         try {
-            const response = await fetch(`/api/orders?orderId=${order.order_id}&productId=${productToRemove.product_id}`, {
-                method: 'DELETE',
+            const paymentDeadline = new Date();
+            paymentDeadline.setDate(paymentDeadline.getDate() + 3);
+            const shippingCode = shippingOption === "ThailandPost" ? "D" : "P";
+
+            await fetch('/api/orders', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
+                body: JSON.stringify({
+                    orderId: order.order_id,
+                    shippingOption: shippingCode,
+                    note,
+                    payment_status: 'N',
+                    order_date: new Date(),
+                    payment_deadline: paymentDeadline,
+                }),
             });
 
-            if (!response.ok) {
-                console.error('Failed to remove product');
+            router.push(`/payment?orderId=${order.order_id}&totalPrice=${totalPrice}`);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error('Error updating order:', error.message);
             } else {
+                console.error('Unknown error updating order');
+            }
+        }
+    }, [order, shippingOption, note, totalPrice, router]);
+
+    const handleRemoveProduct = useCallback(
+        async (index: number) => {
+            if (!order) return;
+
+            const productToRemove = order.products[index];
+            try {
+                const response = await fetch(
+                    `/api/orders?orderId=${order.order_id}&productId=${productToRemove.product_id}`,
+                    {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error('Failed to remove product');
+                    return;
+                }
+
+                const updatedProducts = order.products.filter((_, i) => i !== index);
                 if (updatedProducts.length === 0) {
                     setOrder(null);
                 } else {
-                    setOrder({ ...order, products: updatedProducts });
+                    setOrder((prev) => (prev ? { ...prev, products: updatedProducts } : null));
+                }
+            } catch (error: unknown) {
+                if (error instanceof Error) {
+                    console.error('Error removing product:', error.message);
+                } else {
+                    console.error('Unknown error removing product');
                 }
             }
-        } catch (err) {
-            console.error('Error removing product:', err);
-        }
-    };
-
-    const totalPrice = (order?.products.reduce((total, product) => {
-        return total + (product.price_per_unit * product.product_qty);
-    }, 0) || 0) + shippingCost;
-
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString);
-        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-    };
+        },
+        [order]
+    );
 
     if (loading) {
-        return <p>Loading...</p>;
+        return (
+            <div className="w-full h-screen flex items-center justify-center">
+                <p className="text-lg">Loading...</p>
+            </div>
+        );
     }
 
     return (
         <div className="w-full flex justify-center">
             <div className="flex flex-col lg:flex-row justify-between gap-8 max-w-7xl w-full p-8 bg-white rounded-lg shadow-md">
+                {/* Left Column */}
                 <div className="flex-1 bg-white p-6 rounded-lg">
                     {order ? (
                         <>
@@ -164,20 +214,23 @@ export default function MyCartForm() {
                                 <h3 className="font-bold">Shipping options</h3>
                                 <div className="flex gap-4">
                                     <button
-                                        className={`px-3 py-1 rounded-full ${shippingOption === "ThailandPost" ? "bg-gray-400" : "bg-gray-200"}`}
-                                        onClick={() => setShippingOption("ThailandPost")} // ค่าในนี้จะถูกแปลงเป็น 'D'
+                                        className={`px-3 py-1 rounded-full ${
+                                            shippingOption === "ThailandPost" ? "bg-gray-400" : "bg-gray-200"
+                                        }`}
+                                        onClick={() => setShippingOption("ThailandPost")}
                                     >
                                         ThailandPost
                                     </button>
                                     <button
-                                        className={`px-3 py-1 rounded-full ${shippingOption === "PickUp" ? "bg-gray-400" : "bg-gray-200"}`}
-                                        onClick={() => setShippingOption("PickUp")} // ค่าในนี้จะถูกแปลงเป็น 'P'
+                                        className={`px-3 py-1 rounded-full ${
+                                            shippingOption === "PickUp" ? "bg-gray-400" : "bg-gray-200"
+                                        }`}
+                                        onClick={() => setShippingOption("PickUp")}
                                     >
                                         Pick up
                                     </button>
                                 </div>
                             </div>
-
                             <div className="mb-4">
                                 <h3 className="font-bold">Date ordered</h3>
                                 <p>{order.order_date ? formatDate(order.order_date) : "N/A"}</p>
@@ -201,6 +254,7 @@ export default function MyCartForm() {
                     )}
                 </div>
 
+                {/* Right Column */}
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col justify-between">
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
@@ -215,16 +269,8 @@ export default function MyCartForm() {
                                     <div className="max-h-80 overflow-y-auto mb-4">
                                         <div className="bg-gray-200 p-4 rounded-lg">
                                             {order.products.map((product, index) => (
-                                                <div key={index} className="relative mb-4">
-                                                    <ProductItem
-                                                        album_name={product.album_name}
-                                                        size={product.size}
-                                                        paper_type={product.paper_type}
-                                                        printing_format={product.printing_format}
-                                                        product_qty={product.product_qty}
-                                                        price_per_unit={product.price_per_unit}
-                                                        folderPath={product.folderPath}
-                                                    />
+                                                <div key={product.product_id} className="relative mb-4">
+                                                    <ProductItem {...product} />
                                                     <button
                                                         onClick={() => handleRemoveProduct(index)}
                                                         className="absolute top-2 right-2 text-black font-bold cursor-pointer"
