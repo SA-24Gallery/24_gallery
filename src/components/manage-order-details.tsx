@@ -86,8 +86,6 @@ export default function ManageOrderDetails() {
                         folderPath: product.folderPath,
                     })),
                 });
-                // ลบการอัปเดต steps ที่นี่
-                // setSteps(fetchedOrder.statusTimeline || []);
             } else {
                 setOrder(null);
                 setError("Order not found.");
@@ -156,7 +154,7 @@ export default function ManageOrderDetails() {
             // Get next step's status name and create notification
             const nextStep = steps[currentStatusIndex + 1];
             if (nextStep) {
-                await fetch('/api/notification/update-noti', { // ใช้ path เดิมตามที่มีอยู่
+                await fetch('/api/notification/update-noti', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -165,12 +163,9 @@ export default function ManageOrderDetails() {
                         orderId: order.orderId,
                         customerEmail: order.email,
                         type: 'status',
-                        statusName: nextStep.title  // ส่ง statusName แทน status
+                        statusName: nextStep.title
                     }),
                 });
-    
-                // ลบการอัปเดตสถานะภายในฟังก์ชัน
-                // fetchStatusTimeline จะจัดการอัปเดตสถานะให้
             }
     
             // Refresh timeline data
@@ -293,6 +288,11 @@ export default function ManageOrderDetails() {
         return currentStatusIndex === steps.length - 1;
     };
 
+    // Check if order is canceled
+    const isOrderCanceled = steps.some(
+        (step) => step.title.toLowerCase() === "canceled"
+    );
+
     // Combined useEffect for initial data fetching
     useEffect(() => {
         if (orderId) {
@@ -339,7 +339,7 @@ export default function ManageOrderDetails() {
                 <div className="flex-1 bg-white p-6 rounded-lg space-y-6">
                     <h2 className="text-2xl font-bold mb-4">Order ID #{order.orderId}</h2>
                     
-                    {/* Customer Information */}
+                    {/* ข้อมูลลูกค้า */}
                     <div>
                         <h3 className="font-bold mb-1">Customer</h3>
                         <p>Name: {order.customer}</p>
@@ -347,7 +347,7 @@ export default function ManageOrderDetails() {
                         <p>Phone: {order.phone}</p>
                     </div>
     
-                    {/* Order Dates */}
+                    {/* วันที่สั่งซื้อและรับออเดอร์ */}
                     <div>
                         <h3 className="font-bold mb-1">Date ordered</h3>
                         <p>{formatDate(order.dateOrdered)}</p>
@@ -357,7 +357,7 @@ export default function ManageOrderDetails() {
                         <p>{order.dateReceived ? formatDate(order.dateReceived) : "-"}</p>
                     </div>
     
-                    {/* Order Notes */}
+                    {/* หมายเหตุ */}
                     <div>
                         <h3 className="font-bold mb-1">Notes</h3>
                         <div className="w-full p-2 border border-gray-300 rounded-md bg-gray-50">
@@ -365,54 +365,61 @@ export default function ManageOrderDetails() {
                         </div>
                     </div>
     
-                    {/* Order Status Timeline */}
+                    {/* สถานะออเดอร์ */}
                     <div>
                         <h3 className="font-bold mb-1">Status</h3>
-                        <OrderTimeline steps={steps} />
-                        <div className="flex space-x-4 mt-4">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant="default"
-                                        disabled={
-                                            order.payment_status !== "A" || 
-                                            isAllStatusesCompleted() || 
-                                            currentStatusIndex >= steps.length - 1
-                                        }
-                                    >
-                                        {order.payment_status === "A" && !isAllStatusesCompleted()
-                                            ? "Update"
-                                            : isAllStatusesCompleted()
-                                            ? "All statuses are completed"
-                                            : "Cannot update until payment is approved"
-                                        }
-                                    </Button>
-                                </AlertDialogTrigger>
-                                {order.payment_status === "A" && !isAllStatusesCompleted() && (
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to update the status from 
-                                                "{steps[currentStatusIndex]?.title}" to 
-                                                "{steps[currentStatusIndex + 1]?.title}"?
-                                                This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel asChild>
-                                                <Button variant="secondary">Cancel</Button>
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction asChild>
-                                                <Button onClick={handleStatusUpdate} variant="default">
-                                                    Confirm
-                                                </Button>
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                )}
-                            </AlertDialog>
-                        </div>
+                        {isOrderCanceled ? (
+                            <div className="text-red-500 font-bold text-lg">Order is canceled</div>
+                        ) : (
+                            <>
+                                <OrderTimeline steps={steps} />
+                                <div className="flex space-x-4 mt-4">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                variant="default"
+                                                disabled={
+                                                    order.payment_status !== "A" || 
+                                                    isAllStatusesCompleted() || 
+                                                    currentStatusIndex >= steps.length - 1 ||
+                                                    isOrderCanceled
+                                                }
+                                            >
+                                                {order.payment_status === "A" && !isAllStatusesCompleted()
+                                                    ? "Update"
+                                                    : isAllStatusesCompleted()
+                                                    ? "All statuses are completed"
+                                                    : "Cannot update until payment is approved"
+                                                }
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        {order.payment_status === "A" && !isAllStatusesCompleted() && (
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to update the status from 
+                                                        "{steps[currentStatusIndex]?.title}" to 
+                                                        "{steps[currentStatusIndex + 1]?.title}"?
+                                                        This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel asChild>
+                                                        <Button variant="secondary">Cancel</Button>
+                                                    </AlertDialogCancel>
+                                                    <AlertDialogAction asChild>
+                                                        <Button onClick={handleStatusUpdate} variant="default">
+                                                            Confirm
+                                                        </Button>
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        )}
+                                    </AlertDialog>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
     
@@ -421,7 +428,7 @@ export default function ManageOrderDetails() {
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Order Information</h2>
                         
-                        {/* Shipping Information */}
+                        {/* ข้อมูลการจัดส่ง */}
                         <p className="mb-2">
                             Shipping option: {order.shippingOption === "D" ? "Delivery" : "Pick Up"}
                         </p>
@@ -430,8 +437,8 @@ export default function ManageOrderDetails() {
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
                         )}
     
-                        {/* Tracking Number Dialog */}
-                        {order.shippingOption === "D" && (
+                        {/* Dialog สำหรับเพิ่มหมายเลขติดตาม */}
+                        {order.shippingOption === "D" && !isOrderCanceled && (
                             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="default" disabled={order.payment_status !== "A"}>
@@ -471,7 +478,7 @@ export default function ManageOrderDetails() {
                             </Dialog>
                         )}
     
-                        {/* Payment Status */}
+                        {/* สถานะการชำระเงิน */}
                         <p className="mb-2">
                             Payment status: {
                                 order.payment_status === 'N' ? 'Not Approved' :
@@ -480,7 +487,7 @@ export default function ManageOrderDetails() {
                             }
                         </p>
     
-                        {/* Receipt and Payment Actions */}
+                        {/* ปุ่มสำหรับใบเสร็จและการชำระเงิน */}
                         <div className="space-x-4">
                             <Button variant="default" size="default" disabled={!receiptUrl}>
                                 {receiptUrl ? (
@@ -496,7 +503,7 @@ export default function ManageOrderDetails() {
                                 )}
                             </Button>
     
-                            {(order.payment_status === 'N' || order.payment_status === 'P') && (
+                            {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="default" size="default">
@@ -525,7 +532,7 @@ export default function ManageOrderDetails() {
                             )}
                         </div>
     
-                        {/* Total Price and Product Details */}
+                        {/* ราคารวมและรายละเอียดสินค้า */}
                         <p className="font-bold mb-4">Total price: {totalPrice} Baht</p>
                         <h3 className="font-bold mb-4">Details</h3>
                         {order.products.length > 0 ? (

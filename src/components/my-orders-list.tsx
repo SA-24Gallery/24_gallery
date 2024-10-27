@@ -104,15 +104,16 @@ export function MyOrdersList() {
     } else if (order.paymentStatus === 'P') {
       return 'Payment Pending';
     } else if (order.paymentStatus === 'A') {
-      if (order.status === 'Order completed') {
+      const status = order.status ? order.status.trim().toLowerCase() : '';
+      if (status === 'order completed') {
         return 'Order completed';
-      } else if (order.status === 'Receive order') {
+      } else if (status === 'receive order') {
         return 'Receive order';
-      } else if (order.status === 'Shipped') {
+      } else if (status === 'shipped') {
         return 'Shipped';
-      } else if (order.status === 'Canceled') {
-        return 'Canceled';
-      } else if (!order.status || order.status.trim() === '' || order.status === '0') {
+      } else if (status === 'canceled' || status === '1') {
+        return 'Cancel';
+      } else if (status === '' || status === '0') {
         return 'Waiting for process';
       }
       return order.status;

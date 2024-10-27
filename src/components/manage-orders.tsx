@@ -26,7 +26,7 @@ export function ManageOrders() {
   const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -92,6 +92,33 @@ export function ManageOrders() {
     });
   };
 
+  // Updated getStatusDisplay function
+  const getStatusDisplay = (order: Order) => {
+    const status = order.status ? order.status.trim().toLowerCase() : '';
+
+    // Check for 'Canceled' status first
+    if (status === 'canceled' || status === '1') {
+      return 'Canceled';
+    }
+
+    if (order.paymentStatus === 'N') {
+      return 'Payment Not Approved';
+    } else if (order.paymentStatus === 'P') {
+      return 'Payment Pending';
+    } else if (order.paymentStatus === 'A') {
+      if (status === 'order completed') {
+        return 'Order Completed';
+      } else if (status === 'receive order') {
+        return 'Receive Order';
+      } else if (status === 'shipped') {
+        return 'Shipped';
+      } else if (status === '' || status === '0') {
+        return 'Waiting for Process';
+      }
+      return order.status;
+    }
+    return 'Unknown Status';
+  };
 
   const sortedOrders = [...orders].sort((a, b) => {
     const valueA = a[sortField as keyof Order];
@@ -105,7 +132,6 @@ export function ManageOrders() {
       return 0;
     }
   });
-
 
   const filteredOrders = sortedOrders.filter((order) => {
     const isMatchSearchTerm =
@@ -262,13 +288,7 @@ export function ManageOrders() {
                       {formatDateTime(order.dateReceived)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.paymentStatus === 'N' ? (
-                        <span className="text-sm">Payment Not Approved</span>
-                      ) : order.paymentStatus === 'P' ? (
-                        <span className="text-sm">Pending</span>
-                      ) : (
-                        order.status
-                      )}
+                      {getStatusDisplay(order)}
                     </td>
                   </tr>
                 ))}
