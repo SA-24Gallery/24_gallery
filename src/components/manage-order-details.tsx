@@ -445,12 +445,12 @@ export default function ManageOrderDetails() {
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="default" size="default">
-                                            Update Payment
+                                            Approve Payment
                                         </Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirm Payment Update</AlertDialogTitle>
+                                            <AlertDialogTitle>Confirm Payment Approve</AlertDialogTitle>
                                             <AlertDialogDescription>
                                                 Are you sure you want to approve this payment? This action cannot be undone.
                                             </AlertDialogDescription>
