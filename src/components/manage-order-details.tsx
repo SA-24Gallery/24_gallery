@@ -294,34 +294,50 @@ const isAllStatusesCompleted = (): boolean => {
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-bold mb-1">Status</h3>
-                        <OrderTimeline steps={steps} />
-                        <div className="flex space-x-4 mt-4">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="default">Update</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Are you sure you want to update the status? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel asChild>
-                                            <Button variant="secondary">Cancel</Button>
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction asChild>
-                                            <Button onClick={handleStatusUpdate} variant="default">
-                                                Confirm
-                                            </Button>
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    </div>
+    <h3 className="font-bold mb-1">Status</h3>
+    <OrderTimeline steps={steps} />
+
+    <div className="flex space-x-4 mt-4">
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button
+                    variant="default"
+                    disabled={order.payment_status !== "A" || isAllStatusesCompleted()} // ปิดการใช้งานปุ่มเมื่อสถานะครบหรือการชำระเงินยังไม่ Approve
+                >
+                    {order.payment_status === "A" && !isAllStatusesCompleted()
+                        ? "Update"
+                        : isAllStatusesCompleted()
+                        ? "All statuses are completed"
+                        : "Cannot update until payment is approved"
+                    }
+                </Button>
+            </AlertDialogTrigger>
+            {order.payment_status === "A" && !isAllStatusesCompleted() && (
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to update the status? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button variant="secondary">Cancel</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button onClick={handleStatusUpdate} variant="default">
+                                Confirm
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            )}
+        </AlertDialog>
+    </div>
+</div>
+
+
+
                 </div>
 
                 {/* Right Section */}
