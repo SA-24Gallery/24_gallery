@@ -25,13 +25,12 @@ export function DatePickerWithRange({
 }: DatePickerWithRangeProps) {
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: new Date(2024, 9, 1),
-    to: addDays(new Date(2024, 9, ), 31),
+    to: addDays(new Date(2024, 9, 1), 31),
   });
 
   const handleDateChange = (range: DateRange | undefined) => {
     setDate(range);
 
-    
     const finalRange = range?.from && range.to === null
       ? { from: range.from, to: range.from }
       : { from: range?.from || null, to: range?.to || null };
@@ -55,11 +54,11 @@ export function DatePickerWithRange({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {format(date.from, "dd/MM/yyyy")} -{" "}
+                  {format(date.to, "dd/MM/yyyy")}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                format(date.from, "dd MM yyyy")
               )
             ) : (
               <span>Pick a date</span>

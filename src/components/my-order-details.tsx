@@ -5,16 +5,16 @@ import ProductItem from "@/components/order-details/product-item";
 import OrderTimeline from "@/components/order-details/order-timeline";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation"; // Ensure you import this
+import { useRouter } from "next/navigation";
 
 export default function MyOrderDetailsPage() {
   const [order, setOrder] = useState<any | null>(null);
-  const [statuses, setStatuses] = useState<any[]>([]); // Store status information
+  const [statuses, setStatuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -32,7 +32,7 @@ export default function MyOrderDetailsPage() {
           throw new Error(`Failed to fetch statuses: ${statusResponse.statusText}`);
         }
         const statusData = await statusResponse.json();
-        setStatuses(statusData); // Store status in state
+        setStatuses(statusData);
       } catch (error: any) {
         setError(error.message);
       } finally {
@@ -54,14 +54,12 @@ export default function MyOrderDetailsPage() {
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   };
 
-  // Function to map shipping option from 'D' or 'P' to their full names
   const getShippingOptionDisplay = (option: string) => {
-    if (option === 'D') return 'Delivery';
-    if (option === 'P') return 'Pick Up';
-    return 'Unknown'; // Fallback in case of an unexpected value
+    if (option === "D") return "Delivery";
+    if (option === "P") return "Pick Up";
+    return "Unknown";
   };
 
-  // Function to map paymentStatus to its corresponding display value
   const getPaymentStatusDisplay = (paymentStatus: string) => {
     if (paymentStatus === "A") {
       return "Payment Approved";
@@ -72,6 +70,11 @@ export default function MyOrderDetailsPage() {
     }
     return "Unknown Payment Status";
   };
+
+  // ตรวจสอบว่าออเดอร์ถูกยกเลิกหรือไม่
+  const isOrderCanceled = statuses.some(
+    (status) => status.statusName.toLowerCase() === "canceled"
+  );
 
   if (loading) {
     return <div>Loading order details...</div>;
@@ -86,10 +89,11 @@ export default function MyOrderDetailsPage() {
   }
 
   const shippingCost = order.shippingOption === "D" ? 50 : 0;
-  const totalPrice = order.products.reduce(
-    (total: number, product: any) => total + product.price * product.quantity,
-    0
-  ) + shippingCost;
+  const totalPrice =
+    order.products.reduce(
+      (total: number, product: any) => total + product.price * product.quantity,
+      0
+    ) + shippingCost;
 
   return (
     <div className="w-full flex justify-center">
@@ -108,7 +112,7 @@ export default function MyOrderDetailsPage() {
             <h3 className="font-bold mb-1">Date ordered</h3>
             <p>{new Date(order.dateOrdered).toLocaleDateString()}</p>
             <h3 className="font-bold mb-1 mt-4">Date received</h3>
-            <p>{order.dateReceived ? new Date(order.dateReceived).toLocaleDateString() : '-'}</p>
+            <p>{order.dateReceived ? new Date(order.dateReceived).toLocaleDateString() : "-"}</p>
           </div>
 
           <div>
@@ -121,22 +125,29 @@ export default function MyOrderDetailsPage() {
             />
           </div>
 
-          {/* Order Timeline Component */}
-          <OrderTimeline
+          {/* แสดงข้อความเมื่อออเดอร์ถูกยกเลิก */}
+          {isOrderCanceled ? (
+            <div className="text-red-500 font-bold text-lg">Order is canceled</div>
+          ) : (
+            <OrderTimeline
               steps={statuses.map((status) => ({
                 title: status.statusName,
-                date: status.statusDate ? new Date(status.statusDate).toLocaleDateString() : null, // Check if statusDate exists
-                time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString() : null, // Check if statusDate exists
+                date: status.statusDate
+                  ? new Date(status.statusDate).toLocaleDateString()
+                  : null,
+                time: status.statusDate
+                  ? new Date(status.statusDate).toLocaleTimeString()
+                  : null,
                 completed: status.isCompleted === 1,
               }))}
             />
-
+          )}
         </div>
 
         {/* Right Section */}
         <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
           <div>
-              <div className="mt-12">
+            <div className="mt-12">
               <h3 className="font-bold mb-1">Payment Status</h3>
               <p>{getPaymentStatusDisplay(order.paymentStatus)}</p>
             </div>
@@ -172,7 +183,7 @@ export default function MyOrderDetailsPage() {
 
             <div className="flex justify-between items-center mt-4">
               <p className="text-[20px] font-bold">Total price: {totalPrice || 0} Baht</p>
-              {order.paymentStatus == "N" && (
+              {order.paymentStatus === "N" && (
                 <Button
                   variant="default"
                   size="default"

@@ -24,6 +24,9 @@ export function ManageOrders() {
   const [sortField, setSortField] = useState<string>('orderId');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 20;
+
   const router = useRouter();
 
   useEffect(() => {
@@ -49,6 +52,11 @@ export function ManageOrders() {
 
     fetchOrders();
   }, [filter]);
+
+  // Reset to first page when filter/search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filter, dateRange]);
 
   const handleRowClick = (orderId: string) => {
     router.push(`/manage-order-details?orderId=${orderId}`);
@@ -84,6 +92,33 @@ export function ManageOrders() {
     });
   };
 
+  // Updated getStatusDisplay function
+  const getStatusDisplay = (order: Order) => {
+    const status = order.status ? order.status.trim().toLowerCase() : '';
+
+    // Check for 'Canceled' status first
+    if (status === 'canceled' || status === '1') {
+      return 'Canceled';
+    }
+
+    if (order.paymentStatus === 'N') {
+      return 'Payment Not Approved';
+    } else if (order.paymentStatus === 'P') {
+      return 'Payment Pending';
+    } else if (order.paymentStatus === 'A') {
+      if (status === 'order completed') {
+        return 'Order Completed';
+      } else if (status === 'receive order') {
+        return 'Receive Order';
+      } else if (status === 'shipped') {
+        return 'Shipped';
+      } else if (status === '' || status === '0') {
+        return 'Waiting for Process';
+      }
+      return order.status;
+    }
+    return 'Unknown Status';
+  };
 
   const sortedOrders = [...orders].sort((a, b) => {
     const valueA = a[sortField as keyof Order];
@@ -97,7 +132,6 @@ export function ManageOrders() {
       return 0;
     }
   });
-
 
   const filteredOrders = sortedOrders.filter((order) => {
     const isMatchSearchTerm =
@@ -113,6 +147,46 @@ export function ManageOrders() {
 
     return isMatchSearchTerm && isInDateRange;
   });
+
+  // Pagination calculations
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+  const Pagination = () => {
+    return (
+      <div className="flex justify-center items-center gap-4 mt-6 mb-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className={`px-4 py-2 rounded-md ${
+            currentPage === 1
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          Previous
+        </button>
+        
+        <span className="text-gray-600">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className={`px-4 py-2 rounded-md ${
+            currentPage === totalPages || totalPages === 0
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -170,31 +244,32 @@ export function ManageOrders() {
           No orders found
         </div>
       ) : (
-        <div className="overflow-auto rounded-lg shadow-sm">
-          <table className="min-w-full table-auto">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('orderId')}>
-                  Order ID {sortField === 'orderId' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('customer')}>
-                  Customer {sortField === 'customer' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('email')}>
-                  Email {sortField === 'email' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="px-6 py-3 text-left">Delivery Option</th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateOrdered')}>
-                  Date Ordered {sortField === 'dateOrdered' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
-                  Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </th>
-                <th className="px-6 py-3 text-left">Status</th>
-              </tr>
-            </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map((order, index) => (
+        <>
+          <div className="overflow-auto rounded-lg shadow-sm">
+            <table className="min-w-full table-auto">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('orderId')}>
+                    Order ID {sortField === 'orderId' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('customer')}>
+                    Customer {sortField === 'customer' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('email')}>
+                    Email {sortField === 'email' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left">Delivery Option</th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateOrdered')}>
+                    Date Ordered {sortField === 'dateOrdered' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('dateReceived')}>
+                    Date Received {sortField === 'dateReceived' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </th>
+                  <th className="px-6 py-3 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentOrders.map((order, index) => (
                   <tr
                     key={index}
                     className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
@@ -213,19 +288,22 @@ export function ManageOrders() {
                       {formatDateTime(order.dateReceived)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.paymentStatus === 'N' ? (
-                        <span className="text-sm">Payment Not Approved</span>
-                      ) : order.paymentStatus === 'P' ? (
-                        <span className="text-sm">Pending</span>  // Display "Pending" for 'P'
-                      ) : (
-                        order.status
-                      )}
+                      {getStatusDisplay(order)}
                     </td>
                   </tr>
                 ))}
               </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+
+          {/* Showing entries info */}
+          <div className="mt-4 text-gray-600 text-sm">
+            Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
+          </div>
+
+          {/* Pagination */}
+          <Pagination />
+        </>
       )}
     </div>
   );
