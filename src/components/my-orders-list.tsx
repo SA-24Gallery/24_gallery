@@ -94,11 +94,14 @@ export function MyOrdersList() {
   const getStatusDisplay = (order: Order) => {
     if (order.paymentStatus === 'N') {
       return 'Payment Not Approved';
-    } else if (order.paymentStatus === 'A') {
-      return order.status;
     } else if (order.paymentStatus === 'P') {
       return "Pending";
-    } 
+    } else if (order.paymentStatus === 'A') {
+      if (!order.status || order.status.trim() === '') {
+        return 'Waiting for process';
+      }
+      return order.status;
+    }
     return 'Unknown Status';
   };
 
@@ -152,7 +155,7 @@ export function MyOrdersList() {
               >
                 <td className="px-6 py-4">{order.orderId}</td>
                 <td className="px-6 py-4">
-                  {order.paymentStatus === 'A' ? new Date(order.dateOrdered).toLocaleDateString() : '-'}
+                  {new Date(order.dateOrdered).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
                   {order.paymentStatus === 'A' ? new Date(order.dateReceived).toLocaleDateString() : '-'}
