@@ -56,8 +56,8 @@ export async function POST(
     const message = `New payment received for order #${orderId}.`;
     
     await query(
-      'INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email) VALUES (?, ?, NOW(), ?, ?, ?)',
-      [messageId, message, orderId, 0, adminEmail]
+      'INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Is_read, Email) VALUES (?, ?, NOW(), ?, ?)',
+      [messageId, message, 0, adminEmail]
     );
 
     return NextResponse.json({

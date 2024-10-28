@@ -65,11 +65,11 @@ export async function POST(req: Request) {
 
         // Insert 
         const sql = `
-            INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email)
-            VALUES (?, ?, NOW(), ?, 0, ?)
+            INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Is_read, Email)
+            VALUES (?, ?, NOW(), 0, ?)
         `;
 
-        await query(sql, [messageId, notificationMessage, orderId, customerEmail]);
+        await query(sql, [messageId, notificationMessage, customerEmail]);
 
         return NextResponse.json({
             success: true,
