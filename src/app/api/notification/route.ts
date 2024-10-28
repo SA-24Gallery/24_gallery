@@ -9,6 +9,7 @@ interface Notification extends RowDataPacket {
     Msg: string;
     Notified_date: string;
     Is_read: number;
+
 }
 
 export async function GET() {
@@ -25,7 +26,7 @@ export async function GET() {
 
     try {
         const sql = `
-            SELECT * 
+            SELECT Msg_id, Msg, Notified_date, Is_read 
             FROM NOTIFIED_MSG
             WHERE email = ?
             ORDER BY Notified_date DESC
