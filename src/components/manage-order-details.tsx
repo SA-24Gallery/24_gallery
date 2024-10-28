@@ -54,7 +54,7 @@ export default function ManageOrderDetails() {
     const searchParams = useSearchParams();
     const orderId = searchParams.get("orderId");
 
-    // Fetch order details
+
     const fetchOrderDetails = async () => {
         try {
             const response = await fetch(`/api/orders?orderId=${orderId}`);
@@ -96,7 +96,6 @@ export default function ManageOrderDetails() {
         }
     };
 
-    // Fetch receipt URL
     const fetchReceiptUrl = async () => {
         try {
             const response = await fetch(`/api/view-receipt?orderId=${orderId}`);
@@ -133,7 +132,7 @@ export default function ManageOrderDetails() {
         }
     };
 
-    // Handle status update
+
     const handleStatusUpdate = async () => {
         if (!order || currentStatusIndex >= steps.length - 1) return;
     
@@ -169,14 +168,14 @@ export default function ManageOrderDetails() {
                 });
             }
     
-            // Refresh timeline data
+
             await fetchStatusTimeline();
         } catch (error) {
             console.error('Error updating status:', error);
         }
     };
 
-    // Handle payment update
+
     const handlePaymentUpdate = async () => {
         if (!order) return;
 
@@ -235,7 +234,6 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update order status: ${updateStatusResponse.statusText}`);
             }
 
-            // Refresh data
             await fetchOrderDetails();
             await fetchStatusTimeline();
             
@@ -277,24 +275,24 @@ export default function ManageOrderDetails() {
         }
     };
 
-    // Format date helper function
+
     const formatDate = (dateString: string): string => {
         if (!dateString) return "-";
         const date = new Date(dateString);
         return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
 
-    // Check if all statuses are completed
+
     const isAllStatusesCompleted = (): boolean => {
         return currentStatusIndex === steps.length - 1;
     };
 
-    // Check if order is canceled
+
     const isOrderCanceled = steps.some(
         (step) => step.title.toLowerCase() === "canceled"
     );
 
-    // Combined useEffect for initial data fetching
+
     useEffect(() => {
         if (orderId) {
             setLoading(true);
@@ -357,8 +355,7 @@ export default function ManageOrderDetails() {
                         <h3 className="font-bold mb-1">Date received</h3>
                         <p>{order.dateReceived ? formatDate(order.dateReceived) : "-"}</p>
                     </div>
-    
-                    {/* หมายเหตุ */}
+
                     <div>
                         <h3 className="font-bold mb-1">Notes</h3>
                         <div className="w-full p-2 border border-gray-300 rounded-md bg-gray-50">
@@ -438,7 +435,7 @@ export default function ManageOrderDetails() {
                             <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
                         )}
     
-                        {/* Dialog สำหรับเพิ่มหมายเลขติดตาม */}
+                        {/* Dialog เพิ่ม tracking number */}
                         {order.shippingOption === "D" && !isOrderCanceled && (
                             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                 <DialogTrigger asChild>
@@ -487,62 +484,61 @@ export default function ManageOrderDetails() {
                                 order.payment_status === 'A' ? 'Approved' : 'Unknown'
                             }
                         </p>
-    
                         <div className="space-x-4">
-    <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogTrigger asChild>
-            <Button variant="default" size="default" disabled={!receiptUrl}>
-                View Receipt
-            </Button>
-        </DialogTrigger>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Receipt</DialogTitle>
-            </DialogHeader>
-            <div className="flex justify-center">
-                {receiptUrl ? (
-                    <img
-                        src={receiptUrl}
-                        alt="Receipt"
-                        className="w-full h-auto"
-                    />
-                ) : (
-                    <p>No Receipt Available</p>
-                )}
-            </div>
-        </DialogContent>
-    </Dialog>
+                            <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="default" size="default" disabled={!receiptUrl}>
+                                        View Receipt
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Receipt</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="flex justify-center">
+                                        {receiptUrl ? (
+                                            <img
+                                                src={receiptUrl}
+                                                alt="Receipt"
+                                                className="w-full h-auto"
+                                            />
+                                        ) : (
+                                            <p>No Receipt Available</p>
+                                        )}
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
 
-    {/* ปุ่ม Approve Payment */}
-    {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="default" size="default">
-                    Approve Payment
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Payment Approve</AlertDialogTitle>
-                    <AlertDialogDescription>
-                    Are you sure you want to approve this payment? This action cannot be undone.
-                    Once approved, the payment status will be updated to 'Approved' and the order status will be updated to 'Receive Order.'
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                        <Button variant="secondary">Cancel</Button>
-                    </AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                        <Button onClick={handlePaymentUpdate} variant="default">
-                            Confirm
-                        </Button>
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    )}
-</div>
+                         {/* ปุ่ม Approve Payment */}
+                    {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="default" size="default">
+                                    Approve Payment
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirm Payment Approve</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    Are you sure you want to approve this payment? This action cannot be undone.
+                                    Once approved, the payment status will be updated to 'Approved' and the order status will be updated to 'Receive Order.'
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel asChild>
+                                        <Button variant="secondary">Cancel</Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                        <Button onClick={handlePaymentUpdate} variant="default">
+                                            Confirm
+                                        </Button>
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
 
                         {/* ราคารวมและรายละเอียดสินค้า */}
                         <p className="font-bold mb-4">Total price: {totalPrice} Baht</p>

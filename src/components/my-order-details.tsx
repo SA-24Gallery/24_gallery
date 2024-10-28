@@ -26,7 +26,6 @@ export default function MyOrderDetailsPage() {
         const orderData = await response.json();
         setOrder(orderData[0]);
 
-        // Fetch statuses for the order
         const statusResponse = await fetch(`/api/show-status?orderId=${orderId}`);
         if (!statusResponse.ok) {
           throw new Error(`Failed to fetch statuses: ${statusResponse.statusText}`);
@@ -47,12 +46,6 @@ export default function MyOrderDetailsPage() {
       setError("No order ID provided.");
     }
   }, [orderId]);
-
-  const formatDate = (dateString: string): string => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-  };
 
   const getShippingOptionDisplay = (option: string) => {
     if (option === "D") return "Delivery";
@@ -125,7 +118,6 @@ export default function MyOrderDetailsPage() {
             />
           </div>
 
-          {/* แสดงข้อความเมื่อออเดอร์ถูกยกเลิก */}
           {isOrderCanceled ? (
             <div className="text-red-500 font-bold text-lg">Order is canceled</div>
           ) : (

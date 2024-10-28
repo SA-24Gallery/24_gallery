@@ -43,7 +43,6 @@ export function ManageOrders() {
         const data = await response.json();
         setOrders(Array.isArray(data) ? data : []);
       } catch (error: any) {
-        console.error('Fetch error:', error);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -53,7 +52,7 @@ export function ManageOrders() {
     fetchOrders();
   }, [filter]);
 
-  // Reset to first page when filter/search changes
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filter, dateRange]);
@@ -95,7 +94,6 @@ export function ManageOrders() {
   const getStatusDisplay = (order: Order) => {
     const status = order.status ? order.status.trim().toLowerCase() : '';
 
-    // Check for 'Canceled' status first
     if (status === 'canceled' || status === '1') {
       return 'Canceled';
     }
@@ -147,7 +145,7 @@ export function ManageOrders() {
     return isMatchSearchTerm && isInDateRange;
   });
 
-  // Pagination calculations
+
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
@@ -295,12 +293,10 @@ export function ManageOrders() {
             </table>
           </div>
 
-          {/* Showing entries info */}
           <div className="mt-4 text-gray-600 text-sm">
             Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
           </div>
 
-          {/* Pagination */}
           <Pagination />
         </>
       )}
