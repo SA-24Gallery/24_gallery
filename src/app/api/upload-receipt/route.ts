@@ -15,7 +15,7 @@ const s3Client = new S3Client({
 });
 
 // Allowed file extensions
-const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.heic', '.bmp', '.tiff', '.svg'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.svg'];
 
 export async function POST(request: Request) {
     try {

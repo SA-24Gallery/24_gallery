@@ -124,7 +124,7 @@ export default function Payment() {
                   type="file"
                   id="upload"
                   name="file"
-                  accept="image/*,application/pdf"
+                  accept="image/*"
                   className="border border-gray-400 py-2 px-4 rounded-lg w-64"
                   onChange={handleFileChange}
               />
