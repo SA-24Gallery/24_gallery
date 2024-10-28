@@ -49,6 +49,7 @@ export default function ManageOrderDetails() {
     const [error, setError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [trackingNumberInput, setTrackingNumberInput] = useState("");
+    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
     const [currentStatusIndex, setCurrentStatusIndex] = useState(-1);
     const searchParams = useSearchParams();
     const orderId = searchParams.get("orderId");
@@ -487,51 +488,62 @@ export default function ManageOrderDetails() {
                             }
                         </p>
     
-                        {/* ปุ่มสำหรับใบเสร็จและการชำระเงิน */}
                         <div className="space-x-4">
-                            <Button variant="default" size="default" disabled={!receiptUrl}>
-                                {receiptUrl ? (
-                                    <a 
-                                        href={receiptUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                    >
-                                        View Receipt
-                                    </a>
-                                ) : (
-                                    "No Receipt Available"
-                                )}
-                            </Button>
-    
-                            {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="default" size="default">
-                                            Approve Payment
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirm Payment Approve</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to approve this payment? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel asChild>
-                                                <Button variant="secondary">Cancel</Button>
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction asChild>
-                                                <Button onClick={handlePaymentUpdate} variant="default">
-                                                    Confirm
-                                                </Button>
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                        </div>
-    
+    <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+        <DialogTrigger asChild>
+            <Button variant="default" size="default" disabled={!receiptUrl}>
+                View Receipt
+            </Button>
+        </DialogTrigger>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Receipt</DialogTitle>
+            </DialogHeader>
+            <div className="flex justify-center">
+                {receiptUrl ? (
+                    <img
+                        src={receiptUrl}
+                        alt="Receipt"
+                        className="w-full h-auto"
+                    />
+                ) : (
+                    <p>No Receipt Available</p>
+                )}
+            </div>
+        </DialogContent>
+    </Dialog>
+
+    {/* ปุ่ม Approve Payment */}
+    {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="default" size="default">
+                    Approve Payment
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Payment Approve</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    Are you sure you want to approve this payment? This action cannot be undone.
+                    Once approved, the payment status will be updated to 'Approved' and the order status will be updated to 'Receive Order.'
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel asChild>
+                        <Button variant="secondary">Cancel</Button>
+                    </AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                        <Button onClick={handlePaymentUpdate} variant="default">
+                            Confirm
+                        </Button>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )}
+</div>
+
                         {/* ราคารวมและรายละเอียดสินค้า */}
                         <p className="font-bold mb-4">Total price: {totalPrice} Baht</p>
                         <h3 className="font-bold mb-4">Details</h3>
