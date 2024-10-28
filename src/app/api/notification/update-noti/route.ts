@@ -64,15 +64,13 @@ export async function POST(req: Request) {
             }
         }
 
-        const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
         // Insert notification into database
         const sql = `
             INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email)
-            VALUES (?, ?, ?, ?, 0, ?)
+            VALUES (?, ?, NOW(), ?, 0, ?)
         `;
 
-        await query(sql, [messageId, notificationMessage, currentDate, orderId, customerEmail]);
+        await query(sql, [messageId, notificationMessage, orderId, customerEmail]);
 
         return NextResponse.json({
             success: true,
