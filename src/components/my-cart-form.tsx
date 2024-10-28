@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import ProductItem from "@/components/order-details/product-item";
 
-// Define interfaces for better type safety and performance
 interface Product {
     product_id: string;
     album_name: string;
@@ -28,7 +27,6 @@ interface OrderData {
     products: Product[];
 }
 
-// Function to handle payment deadline with midnight adjustment
 const calculatePaymentDeadline = (): Date => {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + 3);
@@ -50,10 +48,10 @@ export default function MyCartForm() {
     const [shippingOption, setShippingOption] = useState("PickUp"); // Set default to "PickUp"
     const [note, setNote] = useState("");
 
-    // Memoize shipping cost calculation
+    // คำนวณ Shipping cost 
     const shippingCost = useMemo(() => (shippingOption === "ThailandPost" ? 50 : 0), [shippingOption]);
 
-    // Memoize total price calculation
+    // คำนวณ Total price
     const totalPrice = useMemo(() => {
         if (!order?.products) return 0;
         return (
@@ -63,7 +61,6 @@ export default function MyCartForm() {
         );
     }, [order?.products, shippingCost]);
 
-    // Memoize date formatting function
     const formatDate = useMemo(
         () => (dateString: string): string => {
             if (!dateString) return "N/A";
@@ -74,7 +71,7 @@ export default function MyCartForm() {
     );
 
     useEffect(() => {
-        let isMounted = true; // To avoid setting state on an unmounted component
+        let isMounted = true;
 
         const fetchOrderData = async () => {
             try {
