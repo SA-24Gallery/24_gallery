@@ -106,7 +106,7 @@ export function MyOrdersList() {
       const status = order.status ? order.status.trim().toLowerCase() : '';
   
       if (order.shippingOption === 'P' && status === 'shipped') {
-        return 'Ready for pickup';  
+        return 'Ready for Pickup';  
       }
   
       if (status === 'order completed') {

@@ -109,7 +109,7 @@ export function ManageOrders() {
       } else if (status === 'receive order') {
         return 'Receive Order';
       } else if (status === 'shipped') {
-        return order.shippingOption === 'P' ? 'Ready to pick up' : 'Shipped';
+        return order.shippingOption === 'P' ? 'Ready for Pickup' : 'Shipped';
       } else if (status === '' || status === '0') {
         return 'Waiting for Process';
       }
@@ -244,7 +244,7 @@ export function ManageOrders() {
         <option value="receive-order">Receive Order</option>
         <option value="order-completed">Order Completed</option>
         <option value="shipped">Shipped</option>
-        <option value="ready-pickup">Ready to pick up</option>
+        <option value="ready-pickup">Ready for Pickup</option>
         <option value="canceled">Canceled</option>
       </select>
         </div>
@@ -315,7 +315,6 @@ export function ManageOrders() {
           <div className="mt-4 text-gray-600 text-sm">
             Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
           </div>
-
           <Pagination />
         </>
       )}

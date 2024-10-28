@@ -127,7 +127,7 @@ export default function MyOrderDetailsPage() {
                   order.shippingOption === "P" && status.statusName.toLowerCase() === "shipped";
 
                 return {
-                  title: isPickupReady ? "Ready for pickup" : status.statusName, 
+                  title: isPickupReady ? "Ready for Pickup" : status.statusName, 
                   date: status.statusDate
                     ? new Date(status.statusDate).toLocaleDateString()
                     : null,

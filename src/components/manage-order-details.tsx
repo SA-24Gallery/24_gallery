@@ -182,7 +182,7 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update status: ${response.statusText}`);
             }
     
-            // Get next step's status name and create notification
+            
             const nextStep = steps[currentStatusIndex + 1];
             if (nextStep) {
                 await fetch('/api/notification/update-noti', {
