@@ -33,19 +33,16 @@ const calculatePaymentDeadline = (): Date => {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + 3);
 
-    // If there are any hours/minutes/seconds, push to next midnight
-    if (deadline.getHours() !== 0 ||
-        deadline.getMinutes() !== 0 ||
-        deadline.getSeconds() !== 0) {
-
-        // Add one day and set time to midnight (00:00:00)
+    // If time is past 3 AM, push to 3 AM of next day
+    if (deadline.getHours() >= 3) {
         deadline.setDate(deadline.getDate() + 1);
-        deadline.setHours(0, 0, 0, 0);
     }
+
+    // Set time to 3 AM
+    deadline.setHours(3, 0, 0, 0);
 
     return deadline;
 };
-
 export default function MyCartForm() {
     const router = useRouter();
     const [order, setOrder] = useState<OrderData | null>(null);
