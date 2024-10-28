@@ -28,6 +28,24 @@ interface OrderData {
     products: Product[];
 }
 
+// Function to handle payment deadline with midnight adjustment
+const calculatePaymentDeadline = (): Date => {
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 3);
+
+    // If there are any hours/minutes/seconds, push to next midnight
+    if (deadline.getHours() !== 0 ||
+        deadline.getMinutes() !== 0 ||
+        deadline.getSeconds() !== 0) {
+
+        // Add one day and set time to midnight (00:00:00)
+        deadline.setDate(deadline.getDate() + 1);
+        deadline.setHours(0, 0, 0, 0);
+    }
+
+    return deadline;
+};
+
 export default function MyCartForm() {
     const router = useRouter();
     const [order, setOrder] = useState<OrderData | null>(null);
@@ -123,8 +141,7 @@ export default function MyCartForm() {
         if (!order?.products.length) return;
 
         try {
-            const paymentDeadline = new Date();
-            paymentDeadline.setDate(paymentDeadline.getDate() + 3);
+            const paymentDeadline = calculatePaymentDeadline();
             const shippingCode = shippingOption === "ThailandPost" ? "D" : "P";
 
             await fetch('/api/orders', {
