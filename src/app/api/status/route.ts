@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
