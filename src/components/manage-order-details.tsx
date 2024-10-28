@@ -510,7 +510,7 @@ export default function ManageOrderDetails() {
                             </Dialog>
 
                          {/* ปุ่ม Approve Payment */}
-                    {(order.payment_status === 'N' || order.payment_status === 'P') && !isOrderCanceled && (
+                    {(order.payment_status === 'P') && !isOrderCanceled && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="default" size="default">
