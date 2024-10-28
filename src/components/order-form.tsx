@@ -27,9 +27,7 @@ const OrderForm = () => {
     '2p': 39,
     '4p': 39,
     '8p': 30,
-    '4 x 6 (1-2 ใบ)': 20,
-    '4 x 6 (3-19 ใบ)': 10,
-    '4 x 6 (20 ใบขึ้นไป)': 4,
+    '4 x 6': 20, // 4 x 6 price based on quantity
     '5 x 7': 25,
     '6 x 8': 30,
     '8 x 10': 60,
@@ -37,6 +35,23 @@ const OrderForm = () => {
     '10 x 15': 180,
     '12 x 18': 250,
     '16 x 20': 300,
+  };
+
+  const calculatePrice = (size: string, quantity: number): number => {
+    if (size === '4 x 6') {
+      if (quantity >= 20) {
+        return 4 * quantity;
+      } else if (quantity >= 3) {
+        return 10 * quantity;
+      } else {
+        return 20 * quantity;
+      }
+    }
+    return priceList[size] * quantity; // fixed price for other sizes
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuantity(Number(e.target.value));
   };
 
   const validateFiles = (fileList: File[]): boolean => {
@@ -253,15 +268,15 @@ const OrderForm = () => {
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Size:</label>
             <select
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                className={`p-2 text-base border ${formErrors.size ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              className={`p-2 text-base border ${formErrors.size ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
             >
               <option value="">Select size</option>
               {Object.keys(priceList).map((sizeOption) => (
-                  <option key={sizeOption} value={sizeOption}>
-                    {sizeOption}
-                  </option>
+                <option key={sizeOption} value={sizeOption}>
+                  {sizeOption}
+                </option>
               ))}
             </select>
             {formErrors.size && (
@@ -331,11 +346,11 @@ const OrderForm = () => {
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Quantity per file:</label>
             <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                min={1}
-                className={`p-2 text-base border ${formErrors.quantity ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
+              type="number"
+              value={quantity}
+              onChange={handleQuantityChange}
+              min={1}
+              className={`p-2 text-base border ${formErrors.quantity ? 'border-red-500' : 'border-black'} rounded-md w-[150px]`}
             />
             {formErrors.quantity && (
                 <span className="text-xs text-red-500 mt-1">
@@ -347,7 +362,7 @@ const OrderForm = () => {
           <div className="flex justify-end items-center mb-2">
             <label className="text-[20px] font-bold mr-3">Total price:</label>
             <p className="text-[20px] font-bold text-red-500">
-              {priceList[size] && quantity > 0 ? priceList[size] * quantity * files.length : 0} Baht
+              {quantity > 0 && size ? calculatePrice(size, quantity) * files.length : 0} Baht
             </p>
           </div>
 
