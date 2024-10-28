@@ -13,7 +13,6 @@ interface Notification {
 export function NotificationPopover() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
 
-    // ฟังก์ชันสำหรับดึงข้อมูลการแจ้งเตือน
     const fetchNotifications = async () => {
         try {
             const response = await fetch('/api/notification');
@@ -28,13 +27,11 @@ export function NotificationPopover() {
     };
 
     useEffect(() => {
-        fetchNotifications(); // ดึงข้อมูลการแจ้งเตือนเมื่อ Component โหลดครั้งแรก
+        fetchNotifications();
     }, []);
 
-    // คำนวณจำนวนข้อความที่ยังไม่ได้อ่าน
     const unreadCount = notifications.filter(notification => notification.Is_read === 0).length;
 
-    // ฟังก์ชันสำหรับอัปเดตการอ่านทั้งหมด
     const markAllAsRead = async () => {
         try {
             // อัปเดตสถานะการอ่านใน Database
@@ -53,9 +50,9 @@ export function NotificationPopover() {
         <Popover
             onOpenChange={(open) => {
                 if (open) {
-                    markAllAsRead(); // อัปเดตการอ่านในฐานข้อมูลเมื่อ Popover ถูกเปิด
+                    markAllAsRead();
                 } else {
-                    fetchNotifications(); // ดึงข้อมูลใหม่เมื่อ Popover ถูกปิด
+                    fetchNotifications();
                 }
             }}
         >
@@ -76,7 +73,6 @@ export function NotificationPopover() {
                                         : 'bg-white text-black'
                                 }`}
                             >
-                                {/* จุดแสดงว่ายังไม่ได้อ่าน */}
                                 {notification.Is_read === 0 && (
                                     <div className="w-3 h-3 bg-red-500 rounded-full mt-1"></div>
                                 )}

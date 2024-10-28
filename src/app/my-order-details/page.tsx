@@ -1,4 +1,3 @@
-// app/my-orders/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NavBar } from "@/components/nav-bar/nav-bar";

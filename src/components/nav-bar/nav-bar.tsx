@@ -78,19 +78,6 @@ const RightItem = ({session}: { session: Session | null }) => {
 
 
             )}
-
-            {/*<NavigationMenuItem>*/}
-            {/*    {session ? (*/}
-            {/*        <div className="flex flex-col gap-5 items-center sm:flex-row w-fit hi">*/}
-            {/*        <NotificationPopover/>*/}
-            {/*            <ProfileIcon email={session.user?.email ? (session.user?.email) : ("")}/>*/}
-            {/*        </div>*/}
-            {/*    ) : (*/}
-            {/*        <NavigationMenuLink href="/login/">*/}
-            {/*            <div className={"font-medium text-lg"}>LOG IN</div>*/}
-            {/*        </NavigationMenuLink>*/}
-            {/*    )}*/}
-            {/*</NavigationMenuItem>*/}
         </>
     );
 };

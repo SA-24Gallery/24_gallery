@@ -4,8 +4,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import {createNewOrder} from "@/app/api/create-new-order/route";
-// src/app/api/add-product-to-cart
-// Define the OrderBody type for creating an order
+
 type OrderBody = {
     albumName: string;
     fileUrls: string[];
@@ -15,7 +14,7 @@ type OrderBody = {
     quantity: number;
     totalPrice: number;
 };
-// POST request handler: Create or update an order
+
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -64,7 +63,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'User email not found' }, { status: 400 });
         }
 
-        // Check for existing order with payment_status 'N' (Not paid)
         const existingOrder = await query<RowDataPacket[]>(
             `SELECT Order_id FROM orders WHERE email = ? AND order_date IS NULL`,
             [email]
@@ -73,17 +71,14 @@ export async function POST(request: Request) {
         let orderId;
 
         if (existingOrder.length > 0) {
-            // Use existing Order_id
             orderId = existingOrder[0].Order_id;
         } else {
-            // Create new order using the separated functionality
             orderId = await createNewOrder(email);
         }
 
-        // Get the next product ID
         const productId = await getNextProductId();
 
-        // Insert product details associated with the order
+        // Insert product
         const insertProductSql = `
       INSERT INTO Product (
         product_id,

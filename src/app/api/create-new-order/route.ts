@@ -1,4 +1,3 @@
-// src/app/api/create-new-order/route.ts
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';

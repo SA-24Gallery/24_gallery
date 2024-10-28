@@ -1,5 +1,3 @@
-// src/pages/api/close-pool.js
-
 import { closePool } from '@/lib/db';
 import { getSession } from 'next-auth/react';
 import {IncomingMessage} from "node:http";

@@ -1,5 +1,3 @@
-// src/app/api/orders/order-list/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -22,7 +20,6 @@ export async function GET() {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     try {
-        // Simplified query without email filter for now
         let sql = `
         SELECT DISTINCT
           o.Order_id AS orderId,
@@ -57,7 +54,6 @@ export async function GET() {
 
         const orders = await query<OrderRow[]>(sql, [session.user.email]);
 
-        // Transform dates to ISO strings for JSON serialization
         const formattedOrders = orders.map(order => ({
             orderId: order.orderId,
             customer: order.customer,

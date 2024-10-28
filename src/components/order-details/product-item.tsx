@@ -1,5 +1,3 @@
-// src/components/order-details/ProductItem.tsx
-
 import React from "react";
 
 interface ProductItemProps {

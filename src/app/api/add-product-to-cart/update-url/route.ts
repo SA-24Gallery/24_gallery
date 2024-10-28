@@ -1,5 +1,3 @@
-// src/app/api/add-product-to-cart/update-url/route.ts
-
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { ResultSetHeader } from 'mysql2/promise';
@@ -8,7 +6,6 @@ import { authOptions } from '@/lib/auth';
 
 export async function PUT(request: Request) {
     try {
-        // Check authentication
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
