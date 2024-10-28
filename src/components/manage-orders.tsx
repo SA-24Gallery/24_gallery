@@ -62,7 +62,8 @@ export function ManageOrders() {
   };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilter(e.target.value);
+    const selectedFilter = e.target.value;
+    setFilter(selectedFilter);
     setLoading(true);
   };
 
@@ -108,7 +109,7 @@ export function ManageOrders() {
       } else if (status === 'receive order') {
         return 'Receive Order';
       } else if (status === 'shipped') {
-        return 'Shipped';
+        return order.shippingOption === 'P' ? 'Ready to pick up' : 'Shipped';
       } else if (status === '' || status === '0') {
         return 'Waiting for Process';
       }
@@ -135,14 +136,32 @@ export function ManageOrders() {
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.email.toLowerCase().includes(searchTerm.toLowerCase());
-
+  
     const isInDateRange = dateRange.from && dateRange.to
       ? new Date(order.dateOrdered) >= dateRange.from && new Date(order.dateOrdered) <= dateRange.to
       : dateRange.from
       ? new Date(order.dateOrdered).toDateString() === new Date(dateRange.from).toDateString()
       : true;
-
-    return isMatchSearchTerm && isInDateRange;
+  
+    let isFilterMatch = true;
+    
+    if (filter === 'ready-pickup') {
+      isFilterMatch = order.shippingOption === 'P' && order.status.toLowerCase() === 'shipped';
+    } else if (filter === 'shipped') {
+      isFilterMatch = order.shippingOption === 'D' && order.status.toLowerCase() === 'shipped';
+    } else if (filter === 'not-approve') {
+      isFilterMatch = order.paymentStatus === 'N';
+    } else if (filter === 'payment-pending') {
+      isFilterMatch = order.paymentStatus === 'P';
+    } else if (filter === 'receive-order') {
+      isFilterMatch = order.status.toLowerCase() === 'receive order';
+    } else if (filter === 'order-completed') {
+      isFilterMatch = order.status.toLowerCase() === 'order completed';
+    } else if (filter === 'canceled') {
+      isFilterMatch = order.status.toLowerCase() === 'canceled';
+    }
+  
+    return isMatchSearchTerm && isInDateRange && isFilterMatch;
   });
 
 
@@ -214,20 +233,20 @@ export function ManageOrders() {
           />
         </div>
         <div className="ml-4">
-          <select
-            value={filter}
-            onChange={handleFilterChange}
-            className="p-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">All Orders</option>
-            <option value="not-approve">Payment Not Approved</option>
-            <option value="payment-pending">Payment Pending</option>
-            <option value="waiting-process">Waiting for Process</option>
-            <option value="receive-order">Receive Order</option>
-            <option value="order-completed">Order Completed</option>
-            <option value="shipped">Shipped</option>
-            <option value="canceled">Canceled</option>
-          </select>
+        <select
+        value={filter}
+        onChange={handleFilterChange}
+        className="p-2 border border-gray-300 rounded-lg"
+      >
+        <option value="">All Orders</option>
+        <option value="not-approve">Payment Not Approved</option>
+        <option value="payment-pending">Payment Pending</option>
+        <option value="receive-order">Receive Order</option>
+        <option value="order-completed">Order Completed</option>
+        <option value="shipped">Shipped</option>
+        <option value="ready-pickup">Ready to pick up</option>
+        <option value="canceled">Canceled</option>
+      </select>
         </div>
       </div>
 

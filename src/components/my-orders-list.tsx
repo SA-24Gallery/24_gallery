@@ -104,6 +104,11 @@ export function MyOrdersList() {
       return 'Payment Pending';
     } else if (order.paymentStatus === 'A') {
       const status = order.status ? order.status.trim().toLowerCase() : '';
+  
+      if (order.shippingOption === 'P' && status === 'shipped') {
+        return 'Ready for pickup';  
+      }
+  
       if (status === 'order completed') {
         return 'Order completed';
       } else if (status === 'receive order') {
@@ -119,6 +124,7 @@ export function MyOrdersList() {
     }
     return 'Unknown Status';
   };
+  
 
   const formatDate = (dateString: string): string => {
     if (!dateString) return '-';

@@ -53,7 +53,7 @@ export async function POST(req: Request) {
                     notificationMessage = `Order #${orderId} has been completed.`;
                     break;
                 case 'Shipped':
-                    notificationMessage = `Order #${orderId} has been shipped.`;
+                    notificationMessage = `Order #${orderId} has been shipped / ready for pickup.`;
                     break;
                 case 'Receive order':
                     notificationMessage = `Order #${orderId} has been received.`;
