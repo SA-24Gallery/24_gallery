@@ -22,7 +22,7 @@ export function ManageOrders() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filter, setFilter] = useState<string>('');
   const [sortField, setSortField] = useState<string>('orderId');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); 
   const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
@@ -92,7 +92,6 @@ export function ManageOrders() {
     });
   };
 
-  // Updated getStatusDisplay function
   const getStatusDisplay = (order: Order) => {
     const status = order.status ? order.status.trim().toLowerCase() : '';
 
