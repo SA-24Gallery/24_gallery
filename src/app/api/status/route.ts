@@ -91,7 +91,6 @@ export async function GET(request: Request) {
     
     sql += ` ORDER BY o.Order_date DESC`;
 
-    console.log('Executing SQL:', sql);
 
     const orders = await query<RowDataPacket[]>(sql, queryParams);
 

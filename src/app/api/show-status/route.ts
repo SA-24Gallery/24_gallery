@@ -1,4 +1,3 @@
-// src/app/api/show-status/route.ts
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
@@ -35,13 +34,12 @@ export async function PUT(request: Request) {
     try {
         const body = await request.json();
         const orderId = body.orderId;
-        console.log('Received orderId:', orderId);
 
         if (!orderId) {
             return NextResponse.json({ error: 'Missing order ID' }, { status: 400 });
         }
 
-        // 1. ค้นหาสถานะถัดไปที่จะอัพเดท
+        // ค้นหาสถานะถัดไปที่จะอัพเดท
         const findStatusQuery = `
             SELECT Status_id, Status_name, Is_completed_status
             FROM Status
@@ -51,7 +49,6 @@ export async function PUT(request: Request) {
         `;
         
         const [statusToUpdate] = await query<RowDataPacket[]>(findStatusQuery, [orderId]);
-        console.log('Status to update:', statusToUpdate);
 
         if (!statusToUpdate) {
             return NextResponse.json({ 
@@ -60,7 +57,7 @@ export async function PUT(request: Request) {
             }, { status: 400 });
         }
 
-        // 2. อัพเดทสถานะ
+        // อัพเดทสถานะ
         const updateQuery = `
             UPDATE Status 
             SET Is_completed_status = 1, 
@@ -72,7 +69,7 @@ export async function PUT(request: Request) {
 
         await query(updateQuery, [statusToUpdate.Status_id, orderId]);
 
-        // 3. ดึงข้อมูลสถานะทั้งหมดมาใหม่
+        // ดึงข้อมูลสถานะทั้งหมดมาใหม่
         const getUpdatedStatusQuery = `
             SELECT 
                 Status_id AS statusId,

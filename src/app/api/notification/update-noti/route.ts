@@ -1,4 +1,3 @@
-// /src/app/api/notification/update-noti/route.ts
 import { query } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -9,7 +8,7 @@ interface CreateNotificationBody {
     orderId: string;
     customerEmail: string;
     type: 'payment' | 'status';
-    statusName?: string;  // ใช้ statusName แทน status
+    statusName?: string;  
 }
 
 async function generateMessageId(): Promise<string> {
@@ -41,14 +40,14 @@ export async function POST(req: Request) {
         const body: CreateNotificationBody = await req.json();
         const { orderId, customerEmail, type, statusName } = body;
 
-        // Generate new message ID
+        // new message ID
         const messageId = await generateMessageId();
         
         let notificationMessage = '';
-        // Generate notification message based on type
+
         if (type === 'payment') {
             notificationMessage = `Order #${orderId} has been received and payment has been confirmed.`;
-        } else if (type === 'status' && statusName) {  // เพิ่มการตรวจสอบ statusName
+        } else if (type === 'status' && statusName) {  
             switch (statusName) {
                 case 'Order completed':
                     notificationMessage = `Order #${orderId} has been completed.`;
@@ -64,7 +63,7 @@ export async function POST(req: Request) {
             }
         }
 
-        // Insert notification into database
+        // Insert 
         const sql = `
             INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email)
             VALUES (?, ?, NOW(), ?, 0, ?)
@@ -75,7 +74,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             success: true,
             message: 'Notification created successfully',
-            notificationMessage // ส่งข้อความแจ้งเตือนกลับไปด้วยเพื่อการตรวจสอบ
+            notificationMessage 
         });
 
     } catch (error) {
