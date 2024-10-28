@@ -1,9 +1,7 @@
-// /app/api/update-receipt/route.ts
-
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { query } from '@/lib/db'; // Assuming you have exported 'query' from db.ts
+import { query } from '@/lib/db';
 import { ResultSetHeader } from 'mysql2/promise';
 
 interface UpdateReceiptBody {
@@ -20,13 +18,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse request body
     const body: UpdateReceiptBody = await request.json();
     const { orderId, receiptUrl, paymentStatus } = body;
 
     // ตรวจสอบข้อมูลที่ได้รับ
     if (!orderId || !receiptUrl || !paymentStatus) {
-      console.log("Missing fields:", { orderId, receiptUrl, paymentStatus });
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 

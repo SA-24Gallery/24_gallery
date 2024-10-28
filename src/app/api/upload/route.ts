@@ -1,12 +1,9 @@
-// src/app/api/upload/route.ts
-
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import {console} from "next/dist/compiled/@edge-runtime/primitives";
 
-// กำหนดค่า S3 Client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
   credentials: {
@@ -60,12 +57,10 @@ export async function POST(request: Request) {
       await s3Client.send(command);
     });
 
-    // รอให้อัพโหลดทุกไฟล์เสร็จ
     await Promise.all(uploadPromises);
 
     // สร้าง URL ของ folder
     const s3FolderUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${folderKey}`;
-    console.log(s3FolderUrl)
     // ส่งคืน URL ของ folder
     return NextResponse.json({
       success: true,
