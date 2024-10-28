@@ -1,6 +1,5 @@
-// Payment.tsx
-
 "use client";
+
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -40,7 +39,7 @@ export default function Payment() {
       formData.append('file', file);
       formData.append('orderId', orderId); // ส่ง orderId แทน productId
 
-      // อัปโหลด receipt ไปยัง API Route ใหม่
+      // อัปโหลด receipt ไป API Route ใหม่
       const uploadResponse = await fetch('/api/upload-receipt', {
         method: 'POST',
         body: formData,
@@ -110,13 +109,12 @@ export default function Payment() {
         </div>
 
         <form onSubmit={handleDoneClick} className="flex flex-col justify-center items-center mb-6 w-full">
-          {/* Display Total Price */}
           <div className="flex flex-row justify-center items-center gap-2 mb-4">
             <span className="font-bold text-[16px]">Total price:</span>
             <span className="font-bold text-[16px]">{totalPrice} Baht</span>
           </div>
 
-          {/* Upload Receipt Section */}
+          {/* Upload Receipt */}
           <div className="flex flex-col items-center gap-2 w-full">
             <div className="flex flex-row justify-center items-center gap-2">
               <label htmlFor="upload" className="text-[16px] font-medium">
