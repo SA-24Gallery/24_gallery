@@ -37,7 +37,6 @@ export function MyOrdersList() {
       const latestOrders = deduplicateOrders(data);
       setOrders(latestOrders);
     } catch (error: any) {
-      console.error('Error fetching orders:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -48,7 +47,7 @@ export function MyOrdersList() {
     fetchOrders();
   }, []);
 
-  // Reset page when search term changes
+  // Reset page 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
@@ -134,7 +133,7 @@ export function MyOrdersList() {
     });
   };
 
-  // Pagination component
+
   const Pagination = () => {
     const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
@@ -187,12 +186,12 @@ export function MyOrdersList() {
     );
   }
 
-  // Filter and sort orders
+
   const filteredOrders = orders
     .filter(order => order.orderId.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort(sortOrders);
 
-  // Pagination calculations
+
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
@@ -258,12 +257,10 @@ export function MyOrdersList() {
             </table>
           </div>
 
-          {/* Showing entries info */}
           <div className="mt-4 text-gray-600 text-sm">
             Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
           </div>
 
-          {/* Show pagination only if needed */}
           {filteredOrders.length > ordersPerPage && <Pagination />}
         </>
       )}
