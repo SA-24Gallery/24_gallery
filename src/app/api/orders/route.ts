@@ -1,5 +1,3 @@
-// src/app/api/orders/route.ts
-
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
@@ -10,7 +8,6 @@ import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 
-// Configure AWS SDK
 AWS.config.update({
   region: process.env.AWS_REGION!,
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -19,7 +16,6 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-// Initialize S3 client
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
   credentials: {
@@ -28,7 +24,6 @@ const s3Client = new S3Client({
   },
 });
 
-// Function to list objects in a folder
 async function listObjectsInFolder(folderPath: string): Promise<string[]> {
   const command = new ListObjectsV2Command({
     Bucket: process.env.AWS_BUCKET_NAME!,
@@ -41,7 +36,6 @@ async function listObjectsInFolder(folderPath: string): Promise<string[]> {
   return keys;
 }
 
-// Define interfaces
 interface Product {
   productId: string;
   albumName: string;
@@ -86,7 +80,6 @@ export async function POST(request: Request) {
       totalPrice,
     } = body;
 
-    // Function to get the next product ID
     const getNextProductId = async (): Promise<string> => {
       const prefix = 'prd';
       const numberLength = 5;
@@ -112,7 +105,6 @@ export async function POST(request: Request) {
       return nextProductId;
     };
 
-    // Function to get the next order ID
     const getNextOrderId = async (): Promise<string> => {
       const prefix = 'ord';
       const numberLength = 5;
@@ -144,7 +136,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'User email not found' }, { status: 400 });
     }
 
-    // Check for existing order with order_date IS NULL (not yet finalized)
+    // Check order ที่ order_date เป็น NULL
     const existingOrderRows = await query<RowDataPacket[]>(
       `SELECT Order_id FROM Orders WHERE email = ? AND order_date IS NULL`,
       [email]
@@ -153,10 +145,9 @@ export async function POST(request: Request) {
     let orderId: string;
 
     if (existingOrderRows.length > 0) {
-      // Use existing Order_id
       orderId = existingOrderRows[0].Order_id;
     } else {
-      // Create new order with generated Order_id
+      // สร้าง order ใหม่ใช้ generated Order_id
       orderId = await getNextOrderId();
       const insertOrderSql = `
         INSERT INTO Orders (Order_id, Email)
@@ -165,13 +156,11 @@ export async function POST(request: Request) {
       await query<ResultSetHeader>(insertOrderSql, [orderId, email]);
     }
 
-    // Get the next product ID
     const productId = await getNextProductId();
 
-    // Set the folder path using productId
+    // Set the folder path
     const url = `products/${productId}/`;
 
-    // Insert product details associated with the order
     const insertProductSql = `
       INSERT INTO Product (
         Product_id,
@@ -196,7 +185,7 @@ export async function POST(request: Request) {
         printingFormat,
         totalPrice,
         albumName,
-        url, // Use the folder path with productId
+        url,
         orderId,
       ]
     );
@@ -219,7 +208,7 @@ export async function POST(request: Request) {
   }
 }
 
-// GET request handler: Fetch orders or handle download
+// GET request handler: Fetch orders
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -232,7 +221,7 @@ export async function GET(request: Request) {
     const folderPath = searchParams.get('folderPath');
 
     if (download && folderPath) {
-      // First, verify that the user has access to this folderPath
+      // Verify that user has access to this folderPath
       const sql = `
         SELECT p.Product_id, p.Order_id, o.Email
         FROM Product p
@@ -252,7 +241,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
 
-      // Proceed to generate the zip file
       const command = new ListObjectsV2Command({
         Bucket: process.env.AWS_BUCKET_NAME!,
         Prefix: folderPath,
@@ -266,14 +254,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'No files found in the folder' }, { status: 404 });
       }
 
-      // Create a PassThrough stream
       const passthroughStream = new PassThrough();
 
-      // Create a zip archive and pipe it to the passthrough stream
       const archive = archiver('zip', { zlib: { level: 9 } });
       archive.pipe(passthroughStream);
 
-      // For each object, get its data and append to the archive
       for (const object of objects) {
         const key = object.Key!;
         const objectStream = s3.getObject({
@@ -281,16 +266,13 @@ export async function GET(request: Request) {
           Key: key,
         }).createReadStream();
 
-        // Remove the folder path from the file name
         const fileName = key.substring(folderPath.length);
 
         archive.append(objectStream, { name: fileName });
       }
 
-      // Finalize the archive
       archive.finalize();
 
-      // Return the response with appropriate headers
       return new Response(passthroughStream as any, {
         headers: {
           'Content-Type': 'application/zip',
@@ -298,20 +280,16 @@ export async function GET(request: Request) {
         },
       });
     } else {
-      // Existing code to fetch orders
-      // ... [Your existing GET handler code, modified as below]
-
-      // Continue with fetching orders
       const orderId = searchParams.get('orderId');
       const email = searchParams.get('email');
-      const paymentStatus = searchParams.get('payment_status'); // Optional filter
-      const orderDateNull = searchParams.get('order_date_null'); // Optional filter
+      const paymentStatus = searchParams.get('payment_status'); 
+      const orderDateNull = searchParams.get('order_date_null');
 
       let sql = '';
       const queryParams: any[] = [];
 
     if (session.user.role === 'A') {
-      // Admin: Fetch all orders
+      // Admin fetch all orders
       sql = `
         SELECT 
           o.Order_id AS orderId,
@@ -397,7 +375,6 @@ export async function GET(request: Request) {
         queryParams.push(email);
       }
 
-      // Add Optional Filters
       if (paymentStatus) {
         sql += ` AND o.Payment_status = ?`;
         queryParams.push(paymentStatus);
@@ -411,11 +388,10 @@ export async function GET(request: Request) {
 
       const rows = await query<RowDataPacket[]>(sql, queryParams);
 
-      // Transform and group orders and their products
       const transformedOrders: Order[] = [];
 
       for (const order of rows) {
-        // Find or create the current order in transformedOrders
+        // Find or create the current order
         let currentOrder = transformedOrders.find((o) => o.orderId === order.orderId);
 
       if (!currentOrder) {
@@ -439,7 +415,7 @@ export async function GET(request: Request) {
         const product: Product = {
           productId: order.productId,
           albumName: order.albumName,
-          folderPath: order.folderPath, // Include folderPath
+          folderPath: order.folderPath, 
           size: order.size,
           paperType: order.paperType,
           printingFormat: order.printingFormat,
@@ -465,7 +441,7 @@ export async function GET(request: Request) {
   }
 }
 
-// Handler for PUT requests to update order status and details
+// PUT request handler: update order status and details
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -476,7 +452,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const {
       orderId,
-      status = null,                     // Default to null if not provided
+      status = null,                    
       receivedDate = null,
       trackingNumber = null,
       shippingOption = null,
@@ -486,20 +462,7 @@ export async function PUT(request: Request) {
       order_date = null,
     } = body;
 
-    // Log values for debugging
-    console.log({
-      orderId,
-      status,
-      receivedDate,
-      trackingNumber,
-      shippingOption,
-      note,
-      payment_status,
-      payment_deadline,
-      order_date,
-    });
-
-    // Ensure user has permission to update this order
+    // Check user permission
     if (session.user.role !== 'A') {
       const orderRows = await query<RowDataPacket[]>(
         `SELECT email FROM Orders WHERE Order_id = ?`,
@@ -514,7 +477,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    // Update order with new details including status, tracking, shipping, note, payment status, and order_date
+    // Update order
     const updateOrderSql = `
       UPDATE Orders 
       SET Received_date = ?,
@@ -537,7 +500,7 @@ export async function PUT(request: Request) {
       orderId,
     ]);
 
-    // Insert new status if provided
+    // Insert new status
     if (status) {
       const insertStatusSql = `
         INSERT INTO Status (Order_id, Status_name, Status_date)
@@ -559,7 +522,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// Handler for DELETE requests to cancel orders
+// DELETE request handler
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -569,13 +532,13 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
-    const productId = searchParams.get('productId'); // Get productId from query params
+    const productId = searchParams.get('productId');
 
     if (!orderId) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
-    // Verify user has permission to modify this order
+    // ตรวจสอบว่า user has permission to modify order
     if (session.user.role !== 'A') {
       const orderRows = await query<RowDataPacket[]>(
         `SELECT email FROM Orders WHERE Order_id = ?`,
@@ -591,18 +554,17 @@ export async function DELETE(request: Request) {
     }
 
     if (productId) {
-      // Delete a specific product from the order
       const deleteProductSql = `DELETE FROM Product WHERE Product_id = ? AND Order_id = ?`;
       await query<ResultSetHeader>(deleteProductSql, [productId, orderId]);
 
-      // Check if there are any products left in the order
+      // เช็คว่ามี product เหลือใน order ไหม
       const productRows = await query<RowDataPacket[]>(
         `SELECT COUNT(*) as productCount FROM Product WHERE Order_id = ?`,
         [orderId]
       );
 
       if (productRows[0].productCount === 0) {
-        // If no products left, delete the order
+        // ถ้าไม่มี product เหลือจะลบ order
         const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
         await query<ResultSetHeader>(deleteOrderSql, [orderId]);
       }
@@ -612,7 +574,7 @@ export async function DELETE(request: Request) {
         { status: 200 }
       );
     } else {
-      // Delete the entire order and associated products
+      // ลบทั้ง order
       const deleteProductsSql = `DELETE FROM Product WHERE Order_id = ?`;
       await query<ResultSetHeader>(deleteProductsSql, [orderId]);
 

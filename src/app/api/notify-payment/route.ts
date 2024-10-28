@@ -1,5 +1,3 @@
-// src/app/api/notify-payment/route.ts
-
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -31,26 +29,22 @@ export async function POST(
   context: { params: { [key: string]: string | string[] } }
 ) {
   try {
-    // Verify user session
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse request body
     const { orderId } = await req.json();
     if (!orderId) {
       return NextResponse.json({ message: 'Order ID is required' }, { status: 400 });
     }
 
-    // Generate new message ID
+    // Generate message ID
     const messageId = await generateMessageId();
 
-    // Get admin email - updated query to use role "A" or make it case-insensitive
+    // Get admin email
     const adminRows = await query<RowDataPacket[]>(
       'SELECT Email FROM USERS WHERE Role = "A" LIMIT 1'
-      // Alternatively:
-      // 'SELECT Email FROM USERS WHERE LOWER(Role) = "a" LIMIT 1'
     );
 
     if (adminRows.length === 0) {
@@ -59,10 +53,8 @@ export async function POST(
 
     const adminEmail = adminRows[0].Email;
 
-    // Prepare notification message
     const message = `New payment received for order #${orderId}.`;
-
-    // Insert notification
+    
     await query(
       'INSERT INTO NOTIFIED_MSG (Msg_id, Msg, Notified_date, Order_id, Is_read, Email) VALUES (?, ?, NOW(), ?, ?, ?)',
       [messageId, message, orderId, 0, adminEmail]
