@@ -7,7 +7,6 @@ interface Notification {
     Msg_id: number;
     Msg: string;
     Notified_date: string;
-    Order_id: number;
     Is_read: number;
 }
 
@@ -88,9 +87,6 @@ export function NotificationPopover() {
                                                 dateStyle: 'medium',
                                                 timeStyle: 'short',
                                             })}
-                                        </span>
-                                        <span className="text-sm text-gray-400">
-                                            Order ID: {notification.Order_id}
                                         </span>
                                     </div>
                                     <div className="text-base">{notification.Msg}</div>

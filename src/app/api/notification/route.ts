@@ -8,7 +8,6 @@ interface Notification extends RowDataPacket {
     Msg_id: number;
     Msg: string;
     Notified_date: string;
-    Order_id: number;
     Is_read: number;
 }
 
