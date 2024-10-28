@@ -29,7 +29,6 @@ export function PaymentSuccess() {
         if (!response.ok) throw new Error('Failed to fetch order data.');
         
         const data = await response.json();
-        console.log('Fetched order data:', data);  // Log data here to verify
         setOrderData(data);
         setError(null);
       } catch (err) {
@@ -76,15 +75,12 @@ export function PaymentSuccess() {
       </div>
       <h1 className="text-[32px] font-bold mb-[25px]">Payment Successful</h1>
       
-      {/* Order Number */}
       <p className="text-[20px] font-semibold mb-[10px]">ORDER NUMBER #{orderData?.orderId}</p>
       
-      {/* Date and Time */}
       <p className="text-[16px] mb-[10px]">
         Date&Time: {orderData?.dateOrdered ? new Date(orderData.dateOrdered).toLocaleString() : 'N/A'}
       </p>
       
-      {/* Transaction Review */}
       <p className="text-[16px] text-gray-600 mb-[50px]">Your transaction is currently under review.</p>
 
       <Link href="/my-orders-list">

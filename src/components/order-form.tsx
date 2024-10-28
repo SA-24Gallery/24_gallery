@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 const OrderForm = () => {
   const router = useRouter();
 
-  // State variables
   const [albumName, setAlbumName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -40,13 +39,11 @@ const OrderForm = () => {
     '16 x 20': 300,
   };
 
-  // Function to validate file types
   const validateFiles = (fileList: File[]): boolean => {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     return fileList.every(file => validTypes.includes(file.type));
   };
 
-  // Function to handle file selection
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
@@ -66,13 +63,13 @@ const OrderForm = () => {
     }
   };
 
-  // Function to upload files using the upload API
+  // Upload files ใช้ API
   const uploadFiles = async (productId: string): Promise<void> => {
     setUploading(true);
     setUploadProgress(0);
 
     try {
-      // Create a single FormData instance for all files
+      // สร้าง FormData
       const formData = new FormData();
       files.forEach((file, index) => {
         formData.append('file', file);
@@ -93,7 +90,6 @@ const OrderForm = () => {
       if (!data.success) {
         throw new Error('Upload failed');
       }
-      console.log(data.s3FolderUrl)
       return data.folderKey;
 
     } catch (error) {
@@ -105,7 +101,6 @@ const OrderForm = () => {
     }
   };
 
-  // Function to handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -127,10 +122,9 @@ const OrderForm = () => {
     try {
       setUploading(true);
 
-      // Calculate total price
+      // คำนวณ total price
       const totalPrice = priceList[size] * quantity * files.length;
 
-      // Prepare the product data
       const productData = {
         albumName,
         size,
@@ -141,7 +135,7 @@ const OrderForm = () => {
         numberOfFiles: files.length,
       };
 
-      // Create order first
+      // สร้าง Order
       const orderResponse = await fetch('/api/add-product-to-cart', {
         method: 'POST',
         headers: {
@@ -158,10 +152,10 @@ const OrderForm = () => {
       const orderData = await orderResponse.json();
       const productId = orderData.productId;
 
-      // Upload files and get the folder information
+      // Upload files
       const uploadResult = await uploadFiles(productId);
 
-      // Update the product URL in the database
+      // Update URL สินค้าใน database
       const updateUrlResponse = await fetch('/api/add-product-to-cart/update-url', {
         method: 'PUT',
         headers: {
@@ -169,7 +163,7 @@ const OrderForm = () => {
         },
         body: JSON.stringify({
           productId,
-          url: uploadResult // This should be the folderKey from the upload response
+          url: uploadResult
         }),
       });
 
@@ -180,7 +174,7 @@ const OrderForm = () => {
 
       alert('Order created and files uploaded successfully!');
 
-      // Reset form
+      // Reset form แล้วไปหน้า my cart
       setAlbumName('');
       setFiles([]);
       setSize('');
@@ -189,7 +183,6 @@ const OrderForm = () => {
       setQuantity(0);
       setUploadProgress(0);
 
-      // Redirect to cart
       router.push('/my-cart');
 
     } catch (error: any) {
@@ -200,7 +193,6 @@ const OrderForm = () => {
     }
   };
 
-  // Preview component for selected files
   const FilePreview = () => (
       <div className="grid grid-cols-5 gap-1 mt-2">
         {files.map((file, index) => (
@@ -225,7 +217,6 @@ const OrderForm = () => {
   return (
       <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5">
         <div className="flex flex-col items-left bg-white px-[50px] py-[40px] gap-7 w-[814px] h-fit rounded-[20px]">
-          {/* Album name */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Album name:</label>
             <input
@@ -259,7 +250,6 @@ const OrderForm = () => {
             )}
           </div>
 
-          {/* Size selection */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Size:</label>
             <select
@@ -281,7 +271,6 @@ const OrderForm = () => {
             )}
           </div>
 
-          {/* Paper type selection */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Paper type:</label>
             <div className="flex gap-3.5">
@@ -307,7 +296,6 @@ const OrderForm = () => {
             )}
           </div>
 
-          {/* Printing format selection */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Printing format:</label>
             <div className="flex gap-3.5">
@@ -340,7 +328,6 @@ const OrderForm = () => {
             )}
           </div>
 
-          {/* Quantity per file */}
           <div className="flex flex-col mb-3">
             <label className="text-[20px] font-bold mb-2">Quantity per file:</label>
             <input
@@ -357,7 +344,6 @@ const OrderForm = () => {
             )}
           </div>
 
-          {/* Total price display */}
           <div className="flex justify-end items-center mb-2">
             <label className="text-[20px] font-bold mr-3">Total price:</label>
             <p className="text-[20px] font-bold text-red-500">
@@ -365,7 +351,6 @@ const OrderForm = () => {
             </p>
           </div>
 
-          {/* Upload progress */}
           {uploading && (
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
@@ -375,7 +360,6 @@ const OrderForm = () => {
               </div>
           )}
 
-          {/* Submit button */}
           <div className="flex justify-end w-full mt-[-20px]">
             <button
                 type="submit"
