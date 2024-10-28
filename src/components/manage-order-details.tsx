@@ -108,20 +108,51 @@ export default function ManageOrderDetails() {
             setError(error.message);
         }
     };
+    useEffect(() => {
+        if (orderId) {
+            setLoading(true);
+            Promise.all([
+                fetchOrderDetails(),
+                fetchStatusTimeline(),
+                fetchReceiptUrl(),
+            ]).then(() => {
+                setLoading(false);
+            }).catch((error) => {
+                setError(error.message);
+                setLoading(false);
+            });
+        } else {
+            setLoading(false);
+            setError("No order ID provided.");
+        }
+        console.log('Steps:', steps);  // Debugging line
+    }, [orderId]);
+    
 
     const fetchStatusTimeline = async () => {
         try {
             const statusResponse = await fetch(`/api/show-status?orderId=${orderId}`);
             if (statusResponse.ok) {
                 const statuses = await statusResponse.json();
-                const formattedSteps = statuses.map((status: any) => ({
-                    title: status.statusName,
-                    date: status.statusDate ? new Date(status.statusDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : null,
-                    time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) : null,
-                    completed: status.isCompleted === 1
-                }));
+    
+                const formattedSteps = statuses.map((status: any) => {
+                    let title = status.statusName;
+    
+                    // Ensure we have the correct shipping option (order?.shippingOption)
+                    if (order?.shippingOption === 'P' && status.statusName.toLowerCase() === 'shipped') {
+                        title = 'Ready to pick up'; // Change title if shipping option is P and status is shipped
+                    }
+    
+                    return {
+                        title,
+                        date: status.statusDate ? new Date(status.statusDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : null,
+                        time: status.statusDate ? new Date(status.statusDate).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }) : null,
+                        completed: status.isCompleted === 1
+                    };
+                });
+    
                 setSteps(formattedSteps);
-
+    
                 const lastCompletedIndex = formattedSteps.reduce((lastIndex: number, step: StatusStep, index: number) => {
                     return step.completed ? index : lastIndex;
                 }, -1);
@@ -151,7 +182,7 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update status: ${response.statusText}`);
             }
     
-            // Get next step's status name and create notification
+            
             const nextStep = steps[currentStatusIndex + 1];
             if (nextStep) {
                 await fetch('/api/notification/update-noti', {
@@ -370,7 +401,13 @@ export default function ManageOrderDetails() {
                             <div className="text-red-500 font-bold text-lg">Order is canceled</div>
                         ) : (
                             <>
-                                <OrderTimeline steps={steps} />
+                                <OrderTimeline 
+                                        steps={steps.map((step) => ({
+                                            ...step,
+                                            // แปลง status 'shipped' เป็น 'Ready for Pickup' ถ้า shippingOption เป็น 'P'
+                                            title: (order?.shippingOption === 'P' && step.title.toLowerCase() === 'shipped') ? 'Ready for Pickup' : step.title
+                                        }))}
+                                    />
                                 <div className="flex space-x-4 mt-4">
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>

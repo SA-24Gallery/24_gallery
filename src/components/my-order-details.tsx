@@ -122,16 +122,21 @@ export default function MyOrderDetailsPage() {
             <div className="text-red-500 font-bold text-lg">Order is canceled</div>
           ) : (
             <OrderTimeline
-              steps={statuses.map((status) => ({
-                title: status.statusName,
-                date: status.statusDate
-                  ? new Date(status.statusDate).toLocaleDateString()
-                  : null,
-                time: status.statusDate
-                  ? new Date(status.statusDate).toLocaleTimeString()
-                  : null,
-                completed: status.isCompleted === 1,
-              }))}
+              steps={statuses.map((status) => {
+                const isPickupReady =
+                  order.shippingOption === "P" && status.statusName.toLowerCase() === "shipped";
+
+                return {
+                  title: isPickupReady ? "Ready for Pickup" : status.statusName, 
+                  date: status.statusDate
+                    ? new Date(status.statusDate).toLocaleDateString()
+                    : null,
+                  time: status.statusDate
+                    ? new Date(status.statusDate).toLocaleTimeString()
+                    : null,
+                  completed: status.isCompleted === 1,
+                };
+              })}
             />
           )}
         </div>
