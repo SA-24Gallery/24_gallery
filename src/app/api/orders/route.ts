@@ -23,19 +23,6 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 });
-
-async function listObjectsInFolder(folderPath: string): Promise<string[]> {
-  const command = new ListObjectsV2Command({
-    Bucket: process.env.AWS_BUCKET_NAME!,
-    Prefix: folderPath,
-  });
-
-  const response = await s3Client.send(command);
-
-  const keys = response.Contents?.map((item) => item.Key!) || [];
-  return keys;
-}
-
 interface Product {
   productId: string;
   albumName: string;

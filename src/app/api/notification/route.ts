@@ -11,7 +11,7 @@ interface Notification extends RowDataPacket {
     Is_read: number;
 }
 
-export async function GET(req: Request) {
+export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session) {

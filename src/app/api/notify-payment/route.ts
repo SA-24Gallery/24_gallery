@@ -25,8 +25,7 @@ async function generateMessageId(): Promise<string> {
 }
 
 export async function POST(
-  req: Request,
-  context: { params: { [key: string]: string | string[] } }
+  req: Request
 ) {
   try {
     const session = await getServerSession(authOptions);

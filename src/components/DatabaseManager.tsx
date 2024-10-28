@@ -4,8 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 
 export function DatabaseManager() {
-    const pathname = usePathname();
-
+    usePathname();
     const disconnectDatabase = useCallback(async () => {
         try {
             const response = await fetch('/api/disconnect', {

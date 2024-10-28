@@ -1,7 +1,7 @@
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-export async function PUT(req: Request) {
+export async function PUT() {
     try {
         const sql = 'UPDATE NOTIFIED_MSG SET Is_read = 1 WHERE Is_read = 0';
         await query(sql);

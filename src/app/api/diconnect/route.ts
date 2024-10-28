@@ -3,7 +3,7 @@ import { closePool } from '@/lib/db';
 
 let isClosing = false;
 
-export async function POST(request: NextRequest) {
+export async function POST() {
     try {
         if (!isClosing) {
             isClosing = true;

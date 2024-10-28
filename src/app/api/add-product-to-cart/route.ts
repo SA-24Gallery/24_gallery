@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import {createNewOrder} from "@/app/api/create-new-order/route";
+import {createNewOrder} from "@/lib/order";
 
 type OrderBody = {
     albumName: string;

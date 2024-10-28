@@ -63,6 +63,7 @@ const OrderForm = () => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
 
+
       if (selectedFiles.length > 20) {
         alert('Only 20 images allowed. Please reduce the number of files.');
         e.target.value = '';

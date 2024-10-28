@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import {getServerSession} from "next-auth";
@@ -20,7 +20,7 @@ export async function GET() {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     try {
-        let sql = `
+        const sql = `
         SELECT DISTINCT
           o.Order_id AS orderId,
           o.Email AS email,
