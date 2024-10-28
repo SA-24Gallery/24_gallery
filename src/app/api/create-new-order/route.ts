@@ -113,10 +113,12 @@ export async function createNewOrder(email: string): Promise<string> {
     const insertOrderSql = `
     INSERT INTO orders (
       order_id,  
+      order_date,
       email,
       shipping_option,
       payment_status,
-    ) VALUES (?, ?, 'Pick up', 'N')
+      payment_deadline
+    ) VALUES (?, null, ?, 'Pick up', 'N', null)
   `;
 
     await query<ResultSetHeader>(
