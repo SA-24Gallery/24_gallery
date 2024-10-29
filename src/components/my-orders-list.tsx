@@ -98,7 +98,9 @@ export function MyOrdersList() {
   };
 
   const getStatusDisplay = (order: Order) => {
-    if (order.paymentStatus === 'N') {
+    if (order.paymentStatus == 'C'){
+      return 'Canceled';
+    }else if (order.paymentStatus === 'N') {
       return 'Payment Not Approved';
     } else if (order.paymentStatus === 'P') {
       return 'Payment Pending';

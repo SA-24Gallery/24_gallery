@@ -54,20 +54,23 @@ export default function MyOrderDetailsComponent() {
   };
 
   const getPaymentStatusDisplay = (paymentStatus: string) => {
-    if (paymentStatus === "A") {
-      return "Payment Approved";
-    } else if (paymentStatus === "N") {
-      return "Payment Not Approved";
-    } else if (paymentStatus === "P") {
-      return "Payment Pending";
+    switch (paymentStatus) {
+        case "A":
+            return "Payment Approved";
+        case "N":
+            return "Payment Not Approved";
+        case "P":
+            return "Payment Pending";
+        case "C":
+            return "Canceled";
+        default:
+            return "Unknown Payment Status";
     }
-    return "Unknown Payment Status";
-  };
+};
 
-  // ตรวจสอบว่าออเดอร์ถูกยกเลิกหรือไม่
-  const isOrderCanceled = statuses.some(
-    (status) => status.statusName.toLowerCase() === "canceled"
-  );
+  const isOrderCanceled = 
+      order.paymentStatus === 'C' || 
+      statuses.some((status) => status.statusName.toLowerCase() === "canceled");    
 
   if (loading) {
     return <div>Loading order details...</div>;
@@ -119,7 +122,7 @@ export default function MyOrderDetailsComponent() {
           </div>
 
           {isOrderCanceled ? (
-            <div className="text-red-500 font-bold text-lg">Order is canceled</div>
+            <div className="text-red-500 font-bold text-2xl">Order is canceled.</div>
           ) : (
             <OrderTimeline
               steps={statuses.map((status) => {

@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
@@ -53,17 +53,20 @@ export async function GET(request: Request) {
     } else if (filter === 'payment-pending') { 
       sql += ` AND o.Payment_status = 'P'`;
     } else if (filter === 'canceled') {
-      sql += ` AND EXISTS (
-                 SELECT 1
-                 FROM Status s
-                 WHERE s.Order_id = o.Order_id
-                 AND s.Status_name = 'Canceled'
-                 AND s.Status_date = (
-                   SELECT MAX(Status_date)
-                   FROM Status
-                   WHERE Order_id = o.Order_id
-                 )
-               )`;
+      sql += ` AND (
+                o.Payment_status = 'C'
+                OR EXISTS (
+                  SELECT 1
+                  FROM Status s
+                  WHERE s.Order_id = o.Order_id
+                  AND s.Status_name = 'Canceled'
+                  AND s.Status_date = (
+                    SELECT MAX(Status_date)
+                    FROM Status
+                    WHERE Order_id = o.Order_id
+                  )
+                )
+              )`;
     } else if (filter === 'receive-order') {
       sql += ` AND o.Payment_status = 'A'
                AND EXISTS (
@@ -92,9 +95,7 @@ export async function GET(request: Request) {
     
     sql += ` ORDER BY o.Order_date DESC`;
 
-
     const orders = await query<RowDataPacket[]>(sql, queryParams);
-
     return NextResponse.json(orders, { status: 200 });
     
   } catch (error: any) {

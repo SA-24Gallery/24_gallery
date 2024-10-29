@@ -94,7 +94,9 @@ export function ManageOrders() {
 
   const getStatusDisplay = (order: Order) => {
     const status = order.status ? order.status.trim().toLowerCase() : '';
-
+    if (order.paymentStatus === 'C') {
+      return 'Canceled';
+  }
     if (status === 'canceled' || status === '1') {
       return 'Canceled';
     }
@@ -133,37 +135,50 @@ export function ManageOrders() {
 
   const filteredOrders = sortedOrders.filter((order) => {
     const isMatchSearchTerm =
-      order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.email.toLowerCase().includes(searchTerm.toLowerCase());
-  
+        order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.email.toLowerCase().includes(searchTerm.toLowerCase());
+
     const isInDateRange = dateRange.from && dateRange.to
-      ? new Date(order.dateOrdered) >= dateRange.from && new Date(order.dateOrdered) <= dateRange.to
-      : dateRange.from
-      ? new Date(order.dateOrdered).toDateString() === new Date(dateRange.from).toDateString()
-      : true;
-  
+        ? new Date(order.dateOrdered) >= dateRange.from && new Date(order.dateOrdered) <= dateRange.to
+        : dateRange.from
+        ? new Date(order.dateOrdered).toDateString() === new Date(dateRange.from).toDateString()
+        : true;
+
     let isFilterMatch = true;
     
-    if (filter === 'ready-pickup') {
-      isFilterMatch = order.shippingOption === 'P' && order.status.toLowerCase() === 'shipped';
-    } else if (filter === 'shipped') {
-      isFilterMatch = order.shippingOption === 'D' && order.status.toLowerCase() === 'shipped';
-    } else if (filter === 'not-approve') {
-      isFilterMatch = order.paymentStatus === 'N';
-    } else if (filter === 'payment-pending') {
-      isFilterMatch = order.paymentStatus === 'P';
-    } else if (filter === 'receive-order') {
-      isFilterMatch = order.status.toLowerCase() === 'receive order';
-    } else if (filter === 'order-completed') {
-      isFilterMatch = order.status.toLowerCase() === 'order completed';
-    } else if (filter === 'canceled') {
-      isFilterMatch = order.status.toLowerCase() === 'canceled';
+    if (filter === 'canceled') {
+        isFilterMatch = order.paymentStatus === 'C' || 
+                       order.status.toLowerCase() === 'canceled';
+    } else {
+        switch(filter) {
+            case 'ready-pickup':
+                isFilterMatch = order.shippingOption === 'P' && 
+                              order.status.toLowerCase() === 'shipped';
+                break;
+            case 'shipped':
+                isFilterMatch = order.shippingOption === 'D' && 
+                              order.status.toLowerCase() === 'shipped';
+                break;
+            case 'not-approve':
+                isFilterMatch = order.paymentStatus === 'N';
+                break;
+            case 'payment-pending':
+                isFilterMatch = order.paymentStatus === 'P';
+                break;
+            case 'receive-order':
+                isFilterMatch = order.status.toLowerCase() === 'receive order';
+                break;
+            case 'order-completed':
+                isFilterMatch = order.status.toLowerCase() === 'order completed';
+                break;
+            default:
+                isFilterMatch = true; 
+        }
     }
-  
-    return isMatchSearchTerm && isInDateRange && isFilterMatch;
-  });
 
+    return isMatchSearchTerm && isInDateRange && isFilterMatch;
+});
 
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;

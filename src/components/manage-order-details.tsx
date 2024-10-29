@@ -623,13 +623,16 @@ export default function ManageOrderDetails() {
     
                         {/* สถานะการชำระเงิน */}
                         <p className="mb-1 mt-4">
-                            Payment status: {
+                            Payment status:{' '}
+                            <span className={order.payment_status === 'C' ? 'font-bold text-red-500' : ''}>
+                                {
                                 order.payment_status === 'N' ? 'Not Approved' :
                                 order.payment_status === 'P' ? 'Payment Pending' :
-                                order.payment_status === 'A' ? 'Approved' : 
+                                order.payment_status === 'A' ? 'Approved' :
                                 order.payment_status === 'C' ? 'Canceled' : 'Unknown'
-                            }
-                        </p>
+                                }
+                            </span>
+                            </p>
                         <p className="font-bold mb-2">Total price: {totalPrice} Baht</p>
                         <div className="space-x-4">
                             <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
