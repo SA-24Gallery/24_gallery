@@ -460,16 +460,14 @@ export default function ManageOrderDetails() {
     
                 {/* Right Section */}
                 <div className="flex-1 bg-white p-6 rounded-lg flex flex-col space-y-6">
-                    <div>
-                        <h2 className="text-2xl font-bold mb-4">Order Information</h2>
-                        
+                    <div>                        
                         {/* ข้อมูลการจัดส่ง */}
-                        <p className="mb-2">
+                        <p className="mt-12 mb-2">
                             Shipping option: {order.shippingOption === "D" ? "Delivery" : "Pick Up"}
                         </p>
     
                         {order.trackingNumber && (
-                            <p className="mb-2">Tracking Number: {order.trackingNumber}</p>
+                            <p className="mb-2 mt-4">Tracking Number: {order.trackingNumber}</p>
                         )}
     
                         {/* Dialog เพิ่ม tracking number */}
@@ -514,13 +512,14 @@ export default function ManageOrderDetails() {
                         )}
     
                         {/* สถานะการชำระเงิน */}
-                        <p className="mb-2">
+                        <p className="mb-1 mt-4">
                             Payment status: {
                                 order.payment_status === 'N' ? 'Not Approved' :
                                 order.payment_status === 'P' ? 'Payment Pending' :
                                 order.payment_status === 'A' ? 'Approved' : 'Unknown'
                             }
                         </p>
+                        <p className="font-bold mb-2">Total price: {totalPrice} Baht</p>
                         <div className="space-x-4">
                             <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
                                 <DialogTrigger asChild>
@@ -578,8 +577,7 @@ export default function ManageOrderDetails() {
                 </div>
 
                         {/* ราคารวมและรายละเอียดสินค้า */}
-                        <p className="font-bold mb-4">Total price: {totalPrice} Baht</p>
-                        <h3 className="font-bold mb-4">Details</h3>
+                        <h3 className="font-bold mb-4 mt-4">Details</h3>
                         {order.products.length > 0 ? (
                             <div className="max-h-80 overflow-y-auto mb-4">
                                 <div className="bg-gray-200 p-4 rounded-lg">
