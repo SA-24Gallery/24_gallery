@@ -68,9 +68,7 @@ export default function MyOrderDetailsComponent() {
     }
 };
 
-  const isOrderCanceled = 
-      order.paymentStatus === 'C' || 
-      statuses.some((status) => status.statusName.toLowerCase() === "canceled");    
+   
 
   if (loading) {
     return <div>Loading order details...</div>;
@@ -83,6 +81,10 @@ export default function MyOrderDetailsComponent() {
   if (!order) {
     return <div>No order found.</div>;
   }
+
+  const isOrderCanceled = 
+    order.paymentStatus === 'C' || 
+    statuses.some((status) => status.statusName.toLowerCase() === "canceled");  
 
   const shippingCost = order.shippingOption === "D" ? 50 : 0;
   const totalPrice =
