@@ -125,7 +125,6 @@ export default function ManageOrderDetails() {
             setLoading(false);
             setError("No order ID provided.");
         }
-        console.log('Steps:', steps);  // Debugging line
     }, [orderId]);
     
 
@@ -138,9 +137,9 @@ export default function ManageOrderDetails() {
                 const formattedSteps = statuses.map((status: any) => {
                     let title = status.statusName;
     
-                    // Ensure we have the correct shipping option (order?.shippingOption)
+                    
                     if (order?.shippingOption === 'P' && status.statusName.toLowerCase() === 'shipped') {
-                        title = 'Ready to pick up'; // Change title if shipping option is P and status is shipped
+                        title = 'Ready to pick up'; 
                     }
     
                     return {
@@ -168,13 +167,30 @@ export default function ManageOrderDetails() {
         if (!order || currentStatusIndex >= steps.length - 1) return;
     
         try {
+            const nextStep = steps[currentStatusIndex + 1];
+            
+            const isCanceled = steps.some(step => 
+                step.title.toLowerCase() === "canceled" && step.completed
+            );
+            
+            if (isCanceled) {
+                console.error('Cannot update status: Order is canceled');
+                return;
+            }
+    
+            if (nextStep && nextStep.title.toLowerCase() === 'canceled') {
+                console.error('Cannot update to Canceled status through normal flow');
+                return;
+            }
+    
             const response = await fetch('/api/show-status', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    orderId: order.orderId
+                    orderId: order.orderId,
+                    skipReceiveOrder: isOrderCanceled
                 }),
             });
     
@@ -182,8 +198,20 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update status: ${response.statusText}`);
             }
     
-            
-            const nextStep = steps[currentStatusIndex + 1];
+            const updatedSteps = steps.map((step, index) => {
+                if (index === currentStatusIndex + 1) {
+                    return {
+                        ...step,
+                        completed: true,
+                        date: new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
+                        time: new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' })
+                    };
+                }
+                return step;
+            });
+            setSteps(updatedSteps);
+            setCurrentStatusIndex(currentStatusIndex + 1);
+    
             if (nextStep) {
                 await fetch('/api/notification/update-noti', {
                     method: 'POST',
@@ -198,22 +226,26 @@ export default function ManageOrderDetails() {
                     }),
                 });
             }
-    
-
-            await fetchStatusTimeline();
         } catch (error) {
             console.error('Error updating status:', error);
         }
     };
 
-
     const handlePaymentUpdate = async () => {
         if (!order) return;
-
+    
+        const isCanceled = steps.some(step => 
+            step.title.toLowerCase() === "canceled" && step.completed
+        );
+        
+        if (isCanceled) {
+            console.error('Cannot update payment: Order is canceled');
+            return;
+        }
+    
         const currentDateTime = new Date().toISOString();
-
+    
         try {
-            // Update payment status
             const response = await fetch('/api/orders', {
                 method: 'PUT',
                 headers: {
@@ -226,16 +258,16 @@ export default function ManageOrderDetails() {
                     note: order.notes,
                     receivedDate: currentDateTime,
                     trackingNumber: order.trackingNumber,
-                    order_date: order.dateOrdered
+                    order_date: order.dateOrdered,
+                    skipReceiveOrder: isOrderCanceled 
                 }),
                 credentials: 'include',
             });
-
+    
             if (!response.ok) {
                 throw new Error(`Failed to update payment status: ${response.statusText}`);
             }
 
-            // Create notification
             await fetch('/api/notification/update-noti', {
                 method: 'POST',
                 headers: {
@@ -248,7 +280,6 @@ export default function ManageOrderDetails() {
                 }),
             });
 
-            // Update order status
             const updateStatusResponse = await fetch('/api/show-status', {
                 method: 'PUT',
                 headers: {
@@ -270,6 +301,79 @@ export default function ManageOrderDetails() {
             
         } catch (error) {
             console.error('Error updating payment status:', error);
+        }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!order) return;
+      
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    payment_status: 'C',
+                    shippingOption: order.shippingOption,
+                    note: order.notes,
+                    trackingNumber: order.trackingNumber,
+                    order_date: order.dateOrdered,
+                }),
+                credentials: 'include',
+            });
+      
+            if (!response.ok) {
+                throw new Error(`Failed to cancel order: ${response.statusText}`);
+            }
+    
+
+            setOrder(prevOrder => prevOrder ? {
+                ...prevOrder,
+                payment_status: 'C'
+            } : null);
+    
+            const updateStatusResponse = await fetch('/api/show-status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    statusName: 'Canceled',
+                    isCompleted: 1,
+                    skipReceivedDate: true
+                }),
+            });
+    
+            if (!updateStatusResponse.ok) {
+                throw new Error(`Failed to update status: ${updateStatusResponse.statusText}`);
+            }
+    
+            const updatedSteps = [...steps];
+            const canceledStep = {
+                title: 'Canceled',
+                date: new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
+                time: new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }),
+                completed: true
+            };
+            setSteps([...updatedSteps, canceledStep]);
+            setCurrentStatusIndex(updatedSteps.length);
+    
+            await fetch('/api/notification/update-noti', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.orderId,
+                    customerEmail: order.email,
+                    type: 'cancel',
+                }),
+            });
+        } catch (error) {
+            console.error('Error cancelling order:', error);
         }
     };
 
@@ -411,22 +515,25 @@ export default function ManageOrderDetails() {
                                 <div className="flex space-x-4 mt-4">
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button
-                                                variant="default"
-                                                disabled={
-                                                    order.payment_status !== "A" || 
-                                                    isAllStatusesCompleted() || 
-                                                    currentStatusIndex >= steps.length - 1 ||
-                                                    isOrderCanceled
-                                                }
-                                            >
-                                                {order.payment_status === "A" && !isAllStatusesCompleted()
-                                                    ? "Update"
-                                                    : isAllStatusesCompleted()
-                                                    ? "All statuses are completed"
-                                                    : "Cannot update until payment is approved"
-                                                }
-                                            </Button>
+                                        <Button
+    variant="default"
+    disabled={
+        order.payment_status !== "A" || 
+        isAllStatusesCompleted() || 
+        currentStatusIndex >= steps.length - 1 ||
+        isOrderCanceled ||
+        steps[currentStatusIndex + 1]?.title.toLowerCase() === 'canceled'
+    }
+>
+    {order.payment_status === "A" && !isAllStatusesCompleted() && !isOrderCanceled
+        ? "Update"
+        : isOrderCanceled
+        ? "Order is canceled"
+        : isAllStatusesCompleted()
+        ? "All statuses are completed"
+        : "Cannot update until payment is approved"
+    }
+</Button>
                                         </AlertDialogTrigger>
                                         {order.payment_status === "A" && !isAllStatusesCompleted() && (
                                             <AlertDialogContent>
@@ -472,12 +579,15 @@ export default function ManageOrderDetails() {
     
                         {/* Dialog เพิ่ม tracking number */}
                         {order.shippingOption === "D" && !isOrderCanceled && (
-                            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="default" disabled={order.payment_status !== "A"}>
-                                        Add Tracking Number
-                                    </Button>
-                                </DialogTrigger>
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button 
+                                    variant="default" 
+                                    disabled={order.payment_status !== "A" || isOrderCanceled}
+                                >
+                                    Add Tracking Number
+                                </Button>
+                            </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add Tracking Number</DialogTitle>
@@ -516,7 +626,8 @@ export default function ManageOrderDetails() {
                             Payment status: {
                                 order.payment_status === 'N' ? 'Not Approved' :
                                 order.payment_status === 'P' ? 'Payment Pending' :
-                                order.payment_status === 'A' ? 'Approved' : 'Unknown'
+                                order.payment_status === 'A' ? 'Approved' : 
+                                order.payment_status === 'C' ? 'Canceled' : 'Unknown'
                             }
                         </p>
                         <p className="font-bold mb-2">Total price: {totalPrice} Baht</p>
@@ -574,7 +685,37 @@ export default function ManageOrderDetails() {
                             </AlertDialogContent>
                         </AlertDialog>
                     )}
-                </div>
+
+            {/* Cancel Order Button */}
+            {order.payment_status === 'P' && !isOrderCanceled && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="default">
+                            Cancel Order
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Confirm Order Cancellation</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to cancel this order? This action cannot be undone.
+                                Once cancelled, the payment status will be updated to 'Cancelled' and the order will be marked as cancelled.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel asChild>
+                                <Button variant="secondary">Go Back</Button>
+                            </AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                                <Button onClick={handleCancelOrder} variant="destructive">
+                                    Confirm Cancellation
+                                </Button>
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </div>
 
                         {/* ราคารวมและรายละเอียดสินค้า */}
                         <h3 className="font-bold mb-4 mt-4">Details</h3>
