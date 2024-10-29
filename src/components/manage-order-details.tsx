@@ -351,16 +351,7 @@ export default function ManageOrderDetails() {
                 throw new Error(`Failed to update status: ${updateStatusResponse.statusText}`);
             }
     
-            const updatedSteps = [...steps];
-            const canceledStep = {
-                title: 'Canceled',
-                date: new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
-                time: new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' }),
-                completed: true
-            };
-            setSteps([...updatedSteps, canceledStep]);
-            setCurrentStatusIndex(updatedSteps.length);
-    
+
             await fetch('/api/notification/update-noti', {
                 method: 'POST',
                 headers: {
@@ -508,7 +499,7 @@ export default function ManageOrderDetails() {
                                 <OrderTimeline 
                                         steps={steps.map((step) => ({
                                             ...step,
-                                            // แปลง status 'shipped' เป็น 'Ready for Pickup' ถ้า shippingOption เป็น 'P'
+                                         
                                             title: (order?.shippingOption === 'P' && step.title.toLowerCase() === 'shipped') ? 'Ready for Pickup' : step.title
                                         }))}
                                     />
@@ -516,24 +507,24 @@ export default function ManageOrderDetails() {
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                         <Button
-    variant="default"
-    disabled={
-        order.payment_status !== "A" || 
-        isAllStatusesCompleted() || 
-        currentStatusIndex >= steps.length - 1 ||
-        isOrderCanceled ||
-        steps[currentStatusIndex + 1]?.title.toLowerCase() === 'canceled'
-    }
->
-    {order.payment_status === "A" && !isAllStatusesCompleted() && !isOrderCanceled
-        ? "Update"
-        : isOrderCanceled
-        ? "Order is canceled"
-        : isAllStatusesCompleted()
-        ? "All statuses are completed"
-        : "Cannot update until payment is approved"
-    }
-</Button>
+                                            variant="default"
+                                            disabled={
+                                                order.payment_status !== "A" || 
+                                                isAllStatusesCompleted() || 
+                                                currentStatusIndex >= steps.length - 1 ||
+                                                isOrderCanceled ||
+                                                steps[currentStatusIndex + 1]?.title.toLowerCase() === 'canceled'
+                                            }
+                                        >
+                                            {order.payment_status === "A" && !isAllStatusesCompleted() && !isOrderCanceled
+                                                ? "Update"
+                                                : isOrderCanceled
+                                                ? "Order is canceled"
+                                                : isAllStatusesCompleted()
+                                                ? "All statuses are completed"
+                                                : "Cannot update until payment is approved"
+                                            }
+                                        </Button>
                                         </AlertDialogTrigger>
                                         {order.payment_status === "A" && !isAllStatusesCompleted() && (
                                             <AlertDialogContent>
@@ -689,12 +680,12 @@ export default function ManageOrderDetails() {
                         </AlertDialog>
                     )}
 
-            {/* Cancel Order Button */}
+            {/* Payment disapproved Button */}
             {order.payment_status === 'P' && !isOrderCanceled && (
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="default">
-                            Cancel Order
+                         Disapprove Payment
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>

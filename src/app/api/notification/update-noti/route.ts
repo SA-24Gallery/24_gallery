@@ -7,7 +7,7 @@ import { RowDataPacket } from 'mysql2';
 interface CreateNotificationBody {
     orderId: string;
     customerEmail: string;
-    type: 'payment' | 'status';
+    type: 'payment' | 'status' | 'cancel'; // เพิ่ม 'cancel' ที่นี่
     statusName?: string;  
 }
 
@@ -61,6 +61,10 @@ export async function POST(req: Request) {
                 default:
                     notificationMessage = `Order #${orderId} status has been updated to: ${statusName}`;
             }
+        } else if (type === 'cancel') {
+            notificationMessage = `Order #${orderId} has been canceled.`;
+        } else {
+            return NextResponse.json({ message: 'Invalid notification type' }, { status: 400 });
         }
 
         // Insert 
