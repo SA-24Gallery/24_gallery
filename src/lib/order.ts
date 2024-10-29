@@ -110,7 +110,7 @@ export async function createNewOrder(email: string): Promise<string> {
       shipping_option,
       payment_status,
       payment_deadline
-    ) VALUES (?, null, ?, 'Pick up', 'N', null)
+    ) VALUES (?, null, ?, 'P', 'N', null)
   `;
 
     await query<ResultSetHeader>(
