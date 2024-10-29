@@ -5,7 +5,6 @@ import {
 } from "lucide-react"
 
 export type Icons = typeof LucidIcon;
-import Image from 'next/image';
 
 export const Icons = {
     dot: Dot,
@@ -13,13 +12,4 @@ export const Icons = {
     circle_user_round: CircleUserRound,
     mail: Mail,
     phone: Phone,
-    logo: ({ width = 100, height = 100, ...props }) => (
-        <Image
-            src="/images/icon.svg"
-            alt="Logo"
-            width={width}
-            height={height}
-            {...props}
-        />
-    ),
 };
