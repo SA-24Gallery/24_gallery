@@ -12,7 +12,7 @@ import {Sheet, SheetContent, SheetTrigger} from "@/components/ui/sheet";
 import {Menu} from "lucide-react";
 import ProfileIcon from "./profile-icon";
 import {Session} from "next-auth";
-import {NotificationPopover} from "@/components/nav-bar/noti";
+import {NotificationPopover} from "@/components/nav-bar/notification-popover";
 
 const LeftItem = ({session}: { session: Session | null }) => {
     return (

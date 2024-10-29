@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth';
 import { getServerSession } from "next-auth";
 import ManageOrderDetails from "@/components/manage-order-details";
 
-export default async function OrderPage() {
+export default async function ManageOrderDetailPage() {
 
   const session = await getServerSession(authOptions);
   return (

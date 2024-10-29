@@ -4,7 +4,7 @@ interface NotificationBellProps {
     count?: number;
 }
 
-export default function NotiBell({ count = 0 }: NotificationBellProps) {
+export default function NotificationBell({ count = 0 }: NotificationBellProps) {
     return (
         <div className="inline-flex items-center justify-center">
             <div className="relative">

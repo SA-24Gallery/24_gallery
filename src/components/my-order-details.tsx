@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
-export default function MyOrderDetailsPage() {
+export default function MyOrderDetailsComponent() {
   const [order, setOrder] = useState<any | null>(null);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

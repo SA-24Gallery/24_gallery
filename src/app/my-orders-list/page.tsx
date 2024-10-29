@@ -4,7 +4,7 @@ import { NavBar } from "@/components/nav-bar/nav-bar";
 import MyOrdersList from "@/components/my-orders-list";
 import { notFound } from "next/navigation";
 
-export default async function MyOrdersPage() {
+export default async function MyOrdersListPage() {
   const session = await getServerSession(authOptions);
 
 

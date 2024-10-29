@@ -4,7 +4,7 @@ import { NavBar } from "@/components/nav-bar/nav-bar";
 import MyOrdersDetailsPage from "@/components/my-order-details"; 
 
 
-export default async function MyOrdersPageComponent() {
+export default async function MyOrderDetailsPage() {
     const session = await getServerSession(authOptions);
 
     return (

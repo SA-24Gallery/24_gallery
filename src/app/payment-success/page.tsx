@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from '@/lib/auth';
 import { PaymentSuccess } from "@/components/payment-success";
 
-export default async function RegisterPage() {
+export default async function PaymentSuccessPage() {
     const session = await getServerSession(authOptions);
 
     return (

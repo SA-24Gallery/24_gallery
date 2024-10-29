@@ -4,7 +4,7 @@ import { NavBar } from "@/components/nav-bar/nav-bar";
 import ManageOrders from "@/components/manage-orders";
 import { notFound } from "next/navigation";
 
-export default async function MyOrdersPageComponent() {
+export default async function ManageOrdersPage() {
   const session = await getServerSession(authOptions);
 
   // Safely check if session exists and if session.user exists

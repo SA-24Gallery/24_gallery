@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import NotiBell from "@/components/nav-bar/noti-bell";
+import NotificationBell from "@/components/nav-bar/notification-bell";
 import { useEffect, useState } from "react";
 
 interface Notification {
@@ -58,7 +58,7 @@ export function NotificationPopover() {
         >
             <PopoverTrigger asChild>
                 <Button variant="outline" className="w-[35px] border-none bg-transparent">
-                    <NotiBell count={unreadCount} />
+                    <NotificationBell count={unreadCount} />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[350px] p-0 m-0">
