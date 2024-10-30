@@ -36,7 +36,6 @@ export function MyOrdersList() {
       const latestOrders = deduplicateOrders(data);
       setOrders(latestOrders);
     } catch (error) {
-      // Even if there's an error, we'll set orders to empty array
       setOrders([]);
     } finally {
       setLoading(false);
@@ -47,7 +46,6 @@ export function MyOrdersList() {
     fetchOrders();
   }, []);
 
-  // Reset page 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
