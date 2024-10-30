@@ -76,9 +76,9 @@ export function PaymentSuccess() {
       <h1 className="text-[32px] font-bold mb-[25px]">Payment Successful</h1>
       
       <p className="text-[20px] font-semibold mb-[10px]">ORDER NUMBER #{orderData?.orderId}</p>
-      
+
       <p className="text-[16px] mb-[10px]">
-        Date&Time: {orderData?.dateOrdered ? new Date(orderData.dateOrdered).toLocaleString() : 'N/A'}
+        Order Date&Time: {orderData?.dateOrdered ? new Date(orderData.dateOrdered).toLocaleString() : 'N/A'}
       </p>
       
       <p className="text-[16px] text-gray-600 mb-[50px]">Your transaction is currently under review.</p>
