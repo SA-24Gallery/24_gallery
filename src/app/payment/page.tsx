@@ -2,10 +2,14 @@ import { NavBar } from "@/components/nav-bar/nav-bar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Payment from "@/components/payment";
-
+import { notFound } from "next/navigation";
 
 export default async function PaymentPage() {
     const session = await getServerSession(authOptions);
+  
+    if (!session) {
+        notFound();
+    }
 
     return (
         <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "50px" }}>
