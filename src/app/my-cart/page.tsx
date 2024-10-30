@@ -2,9 +2,14 @@ import { NavBar } from '@/components/nav-bar/nav-bar';
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from "next-auth";
 import MyCartForm from "@/components/my-cart-form";
+import { notFound } from "next/navigation";
 
 export default async function MyCart() {
   const session = await getServerSession(authOptions);
+
+  if (!session) {
+    notFound();
+  }
 
   return (
       <div style={{ backgroundColor: "#FFF7F9", minHeight: "100vh", paddingBottom: "60px" }}>
