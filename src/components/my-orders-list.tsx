@@ -18,7 +18,6 @@ interface Order {
 export function MyOrdersList() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'orderId' | 'dateOrdered' | 'dateReceived'>('orderId');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -36,8 +35,8 @@ export function MyOrdersList() {
       const data: Order[] = await response.json();
       const latestOrders = deduplicateOrders(data);
       setOrders(latestOrders);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error) {
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -126,7 +125,6 @@ export function MyOrdersList() {
     }
     return 'Unknown Status';
   };
-  
 
   const formatDate = (dateString: string): string => {
     if (!dateString) return '-';
@@ -140,7 +138,6 @@ export function MyOrdersList() {
       hour12: false,
     });
   };
-
 
   const Pagination = () => {
     const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
@@ -186,15 +183,6 @@ export function MyOrdersList() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-red-500">Error fetching your orders: {error}</div>
-      </div>
-    );
-  }
-
-
   const filteredOrders = orders
     .filter(order => order.orderId.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort(sortOrders);
@@ -216,9 +204,13 @@ export function MyOrdersList() {
         />
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
           No orders found
+        </div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          No orders match your search
         </div>
       ) : (
         <>
