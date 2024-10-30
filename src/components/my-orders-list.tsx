@@ -36,6 +36,7 @@ export function MyOrdersList() {
       const latestOrders = deduplicateOrders(data);
       setOrders(latestOrders);
     } catch (error) {
+      // Even if there's an error, we'll set orders to empty array
       setOrders([]);
     } finally {
       setLoading(false);
@@ -186,7 +187,6 @@ export function MyOrdersList() {
   const filteredOrders = orders
     .filter(order => order.orderId.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort(sortOrders);
-
 
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
