@@ -4,7 +4,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import AWS from 'aws-sdk';
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, ListObjectsV2CommandOutput, DeleteObjectsCommand, _Object } from '@aws-sdk/client-s3';
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 
@@ -509,6 +509,33 @@ export async function PUT(request: Request) {
   }
 }
 
+async function deleteS3Folder(folderKey: string) {
+  let continuationToken: string | undefined = undefined;
+
+  do {
+    const listResponse: ListObjectsV2CommandOutput = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.AWS_BUCKET_NAME!,
+        Prefix: folderKey,
+        ContinuationToken: continuationToken,
+      })
+    );
+
+    if (listResponse.Contents && listResponse.Contents.length > 0) {
+      const deleteParams = {
+        Bucket: process.env.AWS_BUCKET_NAME!,
+        Delete: {
+          Objects: listResponse.Contents.map((item: _Object) => ({ Key: item.Key! })),
+        },
+      };
+
+      await s3Client.send(new DeleteObjectsCommand(deleteParams));
+    }
+
+    continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
+  } while (continuationToken);
+}
+
 // DELETE request handler
 export async function DELETE(request: Request) {
   try {
@@ -556,6 +583,10 @@ export async function DELETE(request: Request) {
         await query<ResultSetHeader>(deleteOrderSql, [orderId]);
       }
 
+      // Delete the product folder in S3
+      const productFolderKey = `products/${productId}/`;
+      await deleteS3Folder(productFolderKey);
+
       return NextResponse.json(
         { success: true, message: 'Product removed from order successfully' },
         { status: 200 }
@@ -567,6 +598,10 @@ export async function DELETE(request: Request) {
 
       const deleteOrderSql = `DELETE FROM Orders WHERE Order_id = ?`;
       await query<ResultSetHeader>(deleteOrderSql, [orderId]);
+
+      // Delete the entire order folder in S3
+      const orderFolderKey = `products/${orderId}/`;
+      await deleteS3Folder(orderFolderKey);
 
       return NextResponse.json(
         { success: true, message: 'Order cancelled successfully' },
